@@ -190,6 +190,47 @@
         display: block;
         margin-bottom: 0.25rem;
       }
+      .folder-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 0.75rem;
+      }
+      .folder-card {
+        padding: 0.85rem 1rem;
+        border-radius: 10px;
+        border: 1px solid #e5e7eb;
+        background: linear-gradient(180deg, #f8fafc, #eef2ff);
+        display: grid;
+        gap: 0.25rem;
+      }
+      .folder-card strong {
+        font-size: 1.05rem;
+      }
+      .folder-meta {
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      .dataset-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 0.35rem;
+      }
+      .dataset-table th, .dataset-table td {
+        text-align: left;
+        padding: 0.6rem 0.45rem;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      .dataset-table th {
+        color: var(--muted);
+        font-weight: 700;
+      }
+      .dataset-empty {
+        padding: 0.8rem 1rem;
+        border: 1px dashed #d1d5db;
+        border-radius: 10px;
+        background: #f8fafc;
+        color: var(--muted);
+      }
     </style>
   </head>
   <body>
@@ -304,6 +345,73 @@
           </div>
         </div>
       </div>
+      <div class="card">
+        <div class="badge">Train</div>
+        <h3>チャットボットの学習データベース</h3>
+        <p class="subtle">作成済みボットごとに学習データをフォルダ管理で保存します。URLと紐づけて整理できます。</p>
+        <div class="stack">
+          <div class="field">
+            <label for="dataset-bot">ボットを選択</label>
+            <select id="dataset-bot" name="dataset-bot"></select>
+          </div>
+          <div class="grid">
+            <div class="stack">
+              <strong>フォルダを追加</strong>
+              <form id="folder-form" class="stack">
+                <div class="field">
+                  <label for="folder-name">フォルダ名</label>
+                  <input id="folder-name" name="folder-name" type="text" placeholder="FAQ, Product docs, Onboarding" />
+                </div>
+                <div class="actions">
+                  <button type="submit">フォルダを追加</button>
+                </div>
+              </form>
+            </div>
+            <div class="stack">
+              <strong>学習データを登録</strong>
+              <form id="dataset-form" class="stack">
+                <div class="field">
+                  <label for="dataset-title">データ名</label>
+                  <input id="dataset-title" name="dataset-title" type="text" placeholder="API v2 docs" required />
+                </div>
+                <div class="field">
+                  <label for="dataset-source">データソース / メモ</label>
+                  <textarea id="dataset-source" name="dataset-source" placeholder="Notion: API handbook、S3: api-v2.zip"></textarea>
+                </div>
+                <div class="field">
+                  <label for="dataset-folder">保存先フォルダ</label>
+                  <select id="dataset-folder" name="dataset-folder"></select>
+                </div>
+                <div class="actions">
+                  <button type="submit">データを追加</button>
+                </div>
+              </form>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="stack">
+            <strong>フォルダ一覧</strong>
+            <div id="folder-list" class="folder-grid"></div>
+          </div>
+          <div class="divider"></div>
+          <div class="stack">
+            <strong>データベース</strong>
+            <table class="dataset-table">
+              <thead>
+                <tr>
+                  <th>データ名</th>
+                  <th>フォルダ</th>
+                  <th>メモ</th>
+                  <th>登録日時</th>
+                </tr>
+              </thead>
+              <tbody id="dataset-table-body"></tbody>
+            </table>
+            <div id="dataset-empty" class="dataset-empty" style="display: none;">まだデータがありません。フォルダを選んで登録してください。</div>
+          </div>
+          <div class="message" id="dataset-message" role="status" aria-live="polite" style="display: none;"></div>
+        </div>
+      </div>
     </main>
     <script>
       (() => {
@@ -313,6 +421,7 @@
         const STORAGE_KEY = "platformAccounts";
         const APP_STORAGE_KEY = "platformAiApps";
         const RUN_STORAGE_KEY = "platformAiRuns";
+        const DATASET_STORAGE_KEY = "platformBotDatasets";
 
         const welcomeEl = document.getElementById("welcome");
         const nameEl = document.getElementById("user-name");
@@ -330,6 +439,18 @@
         const deployButton = document.getElementById("deploy-app");
         const runMessage = document.getElementById("run-message");
         const runHistory = document.getElementById("run-history");
+        const datasetBotSelect = document.getElementById("dataset-bot");
+        const folderForm = document.getElementById("folder-form");
+        const folderNameInput = document.getElementById("folder-name");
+        const datasetForm = document.getElementById("dataset-form");
+        const datasetTitleInput = document.getElementById("dataset-title");
+        const datasetSourceInput = document.getElementById("dataset-source");
+        const datasetFolderSelect = document.getElementById("dataset-folder");
+        const folderList = document.getElementById("folder-list");
+        const datasetTableBody = document.getElementById("dataset-table-body");
+        const datasetEmpty = document.getElementById("dataset-empty");
+        const datasetMessage = document.getElementById("dataset-message");
+        let selectedDatasetAppId = null;
 
         function getSession() {
           const inMemory = sessionStorage.getItem(SESSION_KEY);
@@ -389,8 +510,23 @@
           return [...fallback];
         }
 
+        function loadDatasetStore() {
+          try {
+            const raw = localStorage.getItem(DATASET_STORAGE_KEY);
+            if (raw) return JSON.parse(raw);
+          } catch (error) {
+            console.error("Failed to parse dataset storage", error);
+          }
+          localStorage.setItem(DATASET_STORAGE_KEY, JSON.stringify({}));
+          return {};
+        }
+
         function saveList(key, value) {
           localStorage.setItem(key, JSON.stringify(value));
+        }
+
+        function saveDatasetStore(value) {
+          localStorage.setItem(DATASET_STORAGE_KEY, JSON.stringify(value));
         }
 
         function getApps() {
@@ -401,6 +537,7 @@
               purpose: "FAQと注文履歴を用いて、顧客からの質問に24時間回答するチャットを提供",
               model: "GPT-4o mini",
               sources: "Notion FAQ, Order DB",
+              url: "https://workspace.run/bots/customer-care-copilot",
               createdAt: new Date().toISOString()
             }
           ];
@@ -411,10 +548,39 @@
           return loadStoredList(RUN_STORAGE_KEY, []);
         }
 
+        function ensureDataset(appId) {
+          const store = loadDatasetStore();
+          if (!store[appId]) {
+            store[appId] = {
+              folders: [
+                { id: "root", name: "デフォルト", createdAt: new Date().toISOString() }
+              ],
+              entries: []
+            };
+            saveDatasetStore(store);
+          }
+          return store[appId];
+        }
+
+        function createSlug(name) {
+          return name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "")
+            .replace(/-{2,}/g, "-") || "bot";
+        }
+
+        function createAppUrl(name) {
+          const slug = createSlug(name);
+          const suffix = Math.floor(Math.random() * 9000 + 1000);
+          return `https://workspace.run/bots/${slug}-${suffix}`;
+        }
+
         function renderApps() {
           const apps = getApps();
           appList.innerHTML = "";
           appSelect.innerHTML = "";
+          datasetBotSelect.innerHTML = "";
 
           apps.forEach((app) => {
             const item = document.createElement("div");
@@ -426,6 +592,7 @@
                 <span class="pill">${app.model || "GPT-4o mini"}</span>
                 <span class="pill" style="background:#ecfeff; color:#0b5ed7;">${app.sources || "データソース未指定"}</span>
               </div>
+              <div class="muted" style="margin-top:0.4rem;">URL: <a href="${app.url || "#"}" target="_blank" rel="noreferrer">${app.url || "割り当て中"}</a></div>
             `;
             appList.appendChild(item);
 
@@ -433,7 +600,20 @@
             option.value = app.id;
             option.textContent = app.name;
             appSelect.appendChild(option);
+
+            const datasetOption = document.createElement("option");
+            datasetOption.value = app.id;
+            datasetOption.textContent = app.name;
+            datasetBotSelect.appendChild(datasetOption);
           });
+
+          if (!selectedDatasetAppId || !apps.find((app) => app.id === selectedDatasetAppId)) {
+            selectedDatasetAppId = apps[0]?.id ?? null;
+          }
+          if (datasetBotSelect && selectedDatasetAppId) {
+            datasetBotSelect.value = selectedDatasetAppId;
+          }
+          renderDatasetSection();
         }
 
         function renderRuns() {
@@ -465,6 +645,64 @@
           target.className = `message ${type}`;
         }
 
+        function renderFolders(dataset) {
+          folderList.innerHTML = "";
+          datasetFolderSelect.innerHTML = "";
+
+          dataset.folders.forEach((folder) => {
+            const entryCount = dataset.entries.filter((entry) => entry.folderId === folder.id).length;
+            const card = document.createElement("div");
+            card.className = "folder-card";
+            card.innerHTML = `
+              <strong>${folder.name}</strong>
+              <div class="folder-meta">データ数: ${entryCount}</div>
+              <div class="folder-meta">作成日: ${new Date(folder.createdAt).toLocaleString()}</div>
+            `;
+            folderList.appendChild(card);
+
+            const option = document.createElement("option");
+            option.value = folder.id;
+            option.textContent = `${folder.name} (${entryCount})`;
+            datasetFolderSelect.appendChild(option);
+          });
+        }
+
+        function renderDatasetTable(dataset) {
+          datasetTableBody.innerHTML = "";
+          if (!dataset.entries.length) {
+            datasetEmpty.style.display = "block";
+            return;
+          }
+          datasetEmpty.style.display = "none";
+          dataset.entries
+            .slice()
+            .sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt))
+            .forEach((entry) => {
+              const row = document.createElement("tr");
+              const folder = dataset.folders.find((item) => item.id === entry.folderId);
+              row.innerHTML = `
+                <td>${entry.title}</td>
+                <td>${folder ? folder.name : "デフォルト"}</td>
+                <td>${entry.source || "記載なし"}</td>
+                <td>${new Date(entry.addedAt).toLocaleString()}</td>
+              `;
+              datasetTableBody.appendChild(row);
+            });
+        }
+
+        function renderDatasetSection() {
+          if (!selectedDatasetAppId) {
+            folderList.innerHTML = "";
+            datasetTableBody.innerHTML = "";
+            datasetFolderSelect.innerHTML = "";
+            datasetEmpty.style.display = "block";
+            return;
+          }
+          const dataset = ensureDataset(selectedDatasetAppId);
+          renderFolders(dataset);
+          renderDatasetTable(dataset);
+        }
+
         appBuilderForm?.addEventListener("submit", (event) => {
           event.preventDefault();
           const name = document.getElementById("app-name").value.trim();
@@ -490,13 +728,15 @@
             purpose,
             model: model === "gpt-4o-mini" ? "GPT-4o mini" : model,
             sources: sources || "データソース未指定",
+            url: createAppUrl(name),
             createdAt: new Date().toISOString()
           };
 
+          selectedDatasetAppId = newApp.id;
           apps.push(newApp);
           saveList(APP_STORAGE_KEY, apps);
           appBuilderForm.reset();
-          showMessage(createMessage, "AIチャットベースのWebアプリを作成しました。Runでテストできます。", "success");
+          showMessage(createMessage, `AIチャットベースのWebアプリを作成しました。URL: ${newApp.url}`, "success");
           renderApps();
         });
 
@@ -540,6 +780,61 @@
 
         runButton?.addEventListener("click", () => handleRun("Run"));
         deployButton?.addEventListener("click", () => handleRun("Deploy"));
+
+        datasetBotSelect?.addEventListener("change", (event) => {
+          selectedDatasetAppId = event.target.value;
+          renderDatasetSection();
+        });
+
+        folderForm?.addEventListener("submit", (event) => {
+          event.preventDefault();
+          if (!selectedDatasetAppId) return;
+          const name = folderNameInput.value.trim();
+          if (!name) {
+            showMessage(datasetMessage, "フォルダ名を入力してください。", "error");
+            return;
+          }
+          const store = loadDatasetStore();
+          const dataset = ensureDataset(selectedDatasetAppId);
+          const duplicate = dataset.folders.find((folder) => folder.name.toLowerCase() === name.toLowerCase());
+          if (duplicate) {
+            showMessage(datasetMessage, "同名のフォルダが既に存在します。別の名前にしてください。", "error");
+            return;
+          }
+          dataset.folders.push({ id: `folder-${Date.now()}`, name, createdAt: new Date().toISOString() });
+          store[selectedDatasetAppId] = dataset;
+          saveDatasetStore(store);
+          folderNameInput.value = "";
+          showMessage(datasetMessage, "フォルダを追加しました。", "success");
+          renderDatasetSection();
+        });
+
+        datasetForm?.addEventListener("submit", (event) => {
+          event.preventDefault();
+          if (!selectedDatasetAppId) return;
+          const title = datasetTitleInput.value.trim();
+          const source = datasetSourceInput.value.trim();
+          const folderId = datasetFolderSelect.value || "root";
+          if (!title) {
+            showMessage(datasetMessage, "データ名を入力してください。", "error");
+            return;
+          }
+          const store = loadDatasetStore();
+          const dataset = ensureDataset(selectedDatasetAppId);
+          dataset.entries.push({
+            id: `entry-${Date.now()}`,
+            title,
+            source,
+            folderId,
+            addedAt: new Date().toISOString()
+          });
+          store[selectedDatasetAppId] = dataset;
+          saveDatasetStore(store);
+          datasetTitleInput.value = "";
+          datasetSourceInput.value = "";
+          showMessage(datasetMessage, "学習データを保存しました。", "success");
+          renderDatasetSection();
+        });
 
         signOutButton?.addEventListener("click", () => {
           sessionStorage.removeItem(SESSION_KEY);
