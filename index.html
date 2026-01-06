@@ -41,6 +41,60 @@
         background: #0042c4;
         box-shadow: 0 8px 20px rgba(0, 85, 255, 0.25);
       }
+      .embed-card {
+        margin-top: 2rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 1.5rem;
+        background: #fff;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+      }
+      .code-area {
+        width: 100%;
+        min-height: 120px;
+        border-radius: 10px;
+        border: 1px solid #e5e7eb;
+        background: #0f172a;
+        color: #e2e8f0;
+        font-family: "SFMono-Regular", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+          monospace;
+        padding: 0.85rem;
+      }
+      .widget-demo {
+        position: relative;
+        min-height: 240px;
+        border: 1px dashed #d1d5db;
+        border-radius: 12px;
+        padding: 1rem;
+        margin-top: 1rem;
+        background: linear-gradient(180deg, #ffffff, #f8fafc);
+        overflow: hidden;
+      }
+      .widget-floating {
+        position: absolute;
+        right: 1rem;
+        bottom: 1rem;
+        display: grid;
+        gap: 0.6rem;
+        align-items: end;
+        justify-items: end;
+      }
+      .widget-floating button {
+        padding: 0.75rem 1rem;
+        border-radius: 999px;
+        border: none;
+        background: #0055ff;
+        color: #fff;
+        font-weight: 700;
+        box-shadow: 0 12px 28px rgba(0, 85, 255, 0.25);
+        cursor: pointer;
+      }
+      .widget-frame {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+        background: #fff;
+      }
     </style>
   </head>
   <body>
@@ -55,6 +109,79 @@
         <a class="button" href="./login.html">Platform login</a>
         <a class="button" href="./admin-login.html" style="background: #0f172a; box-shadow: 0 8px 20px rgba(15, 23, 42, 0.35);">Admin console</a>
       </div>
+      <div class="embed-card">
+        <h2>ホームページにボットを貼り付ける</h2>
+        <p style="color: #4b5563;">右下のポップアップとして表示されるウィジェットを3サイズから選び、HTMLに直接貼れるコードを発行します。</p>
+        <div style="display: grid; gap: 0.75rem;">
+          <label for="home-embed-size" style="font-weight: 700;">サイズを選択</label>
+          <select id="home-embed-size" style="max-width: 240px; padding: 0.65rem; border-radius: 8px; border: 1px solid #d1d5db;">
+            <option value="small">Small (320×420)</option>
+            <option value="medium" selected>Medium (360×520)</option>
+            <option value="large">Large (420×640)</option>
+          </select>
+          <label for="home-embed-code" style="font-weight: 700;">HTMLコード</label>
+          <textarea id="home-embed-code" class="code-area" readonly></textarea>
+          <div class="widget-demo">
+            <p style="margin: 0 0 0.5rem; color: #4b5563;">右下でポップアップする表示イメージ</p>
+            <div id="home-widget-preview" class="widget-floating"></div>
+          </div>
+        </div>
+      </div>
     </main>
+    <script>
+      (() => {
+        const sizeSelect = document.getElementById("home-embed-size");
+        const codeArea = document.getElementById("home-embed-code");
+        const preview = document.getElementById("home-widget-preview");
+        const botUrl = "https://workspace.run/bots/site-widget";
+
+        function getSize(size) {
+          const sizes = {
+            small: { width: 320, height: 420 },
+            medium: { width: 360, height: 520 },
+            large: { width: 420, height: 640 }
+          };
+          return sizes[size] || sizes.medium;
+        }
+
+        function render() {
+          const size = sizeSelect.value;
+          const { width, height } = getSize(size);
+          const embed = [
+            '<div id=\"site-bot-launcher\"></div>',
+            '<script>',
+            "(function(){",
+            "  var launcher=document.getElementById('site-bot-launcher');",
+            "  if(!launcher){launcher=document.createElement('div');document.body.appendChild(launcher);} ",
+            "  launcher.style.position='fixed';launcher.style.right='18px';launcher.style.bottom='18px';launcher.style.zIndex='9999';launcher.style.display='grid';launcher.style.gap='8px';",
+            "  var button=document.createElement('button');button.textContent='Chat with Site Bot';button.style.padding='12px 14px';button.style.borderRadius='999px';button.style.background='#0055ff';button.style.color='#fff';button.style.border='none';button.style.cursor='pointer';",
+            "  var frame=document.createElement('iframe');frame.src='" + botUrl + "';frame.width='" + width + "';frame.height='" + height + "';frame.style.border='1px solid #e5e7eb';frame.style.borderRadius='12px';frame.style.boxShadow='0 15px 36px rgba(0,0,0,0.14)';frame.style.display='none';",
+            "  button.addEventListener('click',function(){frame.style.display=frame.style.display==='none'?'block':'none';});",
+            "  launcher.appendChild(frame);launcher.appendChild(button);",
+            "})();",
+            "<\/script>"
+          ].join("\n");
+          codeArea.value = embed;
+          if (preview) {
+            preview.innerHTML = '';
+            const frame = document.createElement('div');
+            frame.className = 'widget-frame';
+            frame.style.width = width + 'px';
+            frame.style.height = Math.min(height, 260) + 'px';
+            frame.style.display = 'grid';
+            frame.style.placeItems = 'center';
+            frame.style.color = '#0f172a';
+            frame.textContent = botUrl;
+            const button = document.createElement('button');
+            button.textContent = '右下のボットを開く';
+            preview.appendChild(frame);
+            preview.appendChild(button);
+          }
+        }
+
+        sizeSelect.addEventListener("change", render);
+        render();
+      })();
+    </script>
   </body>
 </html>
