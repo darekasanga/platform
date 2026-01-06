@@ -222,6 +222,22 @@
         color: var(--muted);
         font-size: 0.95rem;
       }
+      .message {
+        margin: 0.65rem 0 0;
+        padding: 0.8rem 1rem;
+        border-radius: 12px;
+        font-weight: 700;
+      }
+      .message.success {
+        background: rgba(16, 185, 129, 0.12);
+        border: 1px solid rgba(16, 185, 129, 0.35);
+        color: #bbf7d0;
+      }
+      .message.error {
+        background: rgba(239, 68, 68, 0.12);
+        border: 1px solid rgba(239, 68, 68, 0.35);
+        color: #fecdd3;
+      }
     </style>
   </head>
   <body>
@@ -247,10 +263,10 @@
       </section>
 
       <div class="grid">
-        <div class="panel">
-          <h2>Create or import account</h2>
-          <p>Set user details and roles. A temporary password will be <strong>administration</strong>.</p>
-          <form>
+      <div class="panel">
+        <h2>Create or import account</h2>
+        <p>Set user details and roles. A temporary password will be <strong>administration</strong>.</p>
+          <form id="admin-account-form">
             <label for="full-name">Full name</label>
             <input id="full-name" name="full-name" type="text" placeholder="Maria Chen" required />
 
@@ -281,6 +297,7 @@
               <button type="submit">Create account</button>
               <button class="secondary" type="button">Send welcome email</button>
             </div>
+            <div class="message" id="admin-message" role="status" aria-live="polite"></div>
           </form>
         </div>
 
@@ -339,40 +356,123 @@
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody>
-            <tr>
-              <td>
-                <div><strong>Patricia Ortega</strong></div>
-                <div class="muted">patricia@acme.io</div>
-              </td>
-              <td><span class="badge success">Administrator</span></td>
-              <td><span class="badge success">Active</span></td>
-              <td>2 hours ago</td>
-              <td><button class="secondary" type="button">Reset to administration</button></td>
-            </tr>
-            <tr>
-              <td>
-                <div><strong>Devon King</strong></div>
-                <div class="muted">devon.king@acme.io</div>
-              </td>
-              <td><span class="badge neutral">Workspace Manager</span></td>
-              <td><span class="badge danger">Password reset pending</span></td>
-              <td>Yesterday</td>
-              <td><button class="secondary" type="button">Send reset</button></td>
-            </tr>
-            <tr>
-              <td>
-                <div><strong>Helena Rossi</strong></div>
-                <div class="muted">helena.rossi@acme.io</div>
-              </td>
-              <td><span class="badge neutral">Analyst</span></td>
-              <td><span class="badge success">Active</span></td>
-              <td>Aug 12</td>
-              <td><button class="secondary" type="button">Lock account</button></td>
-            </tr>
-          </tbody>
+          <tbody id="directory-body"></tbody>
         </table>
       </div>
     </main>
+    <script>
+      (() => {
+        const STORAGE_KEY = "platformAccounts";
+        const SEED_ACCOUNTS = [
+          { id: "seed-1", name: "Patricia Ortega", email: "patricia@acme.io", role: "Administrator", status: "Active", lastLogin: "2 hours ago", initialPassword: "administration" },
+          { id: "seed-2", name: "Devon King", email: "devon.king@acme.io", role: "Workspace Manager", status: "Password reset pending", lastLogin: "Yesterday", initialPassword: "administration" },
+          { id: "seed-3", name: "Helena Rossi", email: "helena.rossi@acme.io", role: "Analyst", status: "Active", lastLogin: "Aug 12", initialPassword: "administration" }
+        ];
+
+        const directoryBody = document.getElementById("directory-body");
+        const adminForm = document.getElementById("admin-account-form");
+        const adminMessage = document.getElementById("admin-message");
+        const addAccountButton = document.querySelector('button[type="button"]');
+
+        function loadAccounts() {
+          try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) return JSON.parse(stored);
+          } catch (error) {
+            console.error("Failed to read stored accounts", error);
+          }
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_ACCOUNTS));
+          return [...SEED_ACCOUNTS];
+        }
+
+        function saveAccounts(list) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+        }
+
+        function getAccounts() {
+          return loadAccounts();
+        }
+
+        function showAdminMessage(text, type) {
+          if (!adminMessage) return;
+          adminMessage.textContent = text;
+          adminMessage.className = `message ${type}`;
+        }
+
+        function renderDirectory() {
+          if (!directoryBody) return;
+          const accounts = getAccounts();
+          directoryBody.innerHTML = "";
+
+          accounts.forEach((account) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>
+                <div><strong>${account.name}</strong></div>
+                <div class="muted">${account.email}</div>
+              </td>
+              <td><span class="badge ${account.role === "Administrator" ? "success" : "neutral"}">${account.role}</span></td>
+              <td><span class="badge ${account.status.toLowerCase().includes("pending") ? "danger" : "success"}">${account.status}</span></td>
+              <td>${account.lastLogin}</td>
+              <td><button class="secondary" type="button">Reset to ${account.initialPassword || "administration"}</button></td>
+            `;
+            directoryBody.appendChild(row);
+          });
+        }
+
+        function addAccount({ name, email, role, status, lastLogin }) {
+          const accounts = getAccounts();
+          const emailExists = accounts.some((acct) => acct.email.toLowerCase() === email.toLowerCase());
+          if (emailExists) {
+            showAdminMessage("このメールは既に登録されています。", "error");
+            return false;
+          }
+          accounts.push({
+            id: crypto.randomUUID ? crypto.randomUUID() : `acct-${Date.now()}`,
+            name,
+            email,
+            role,
+            status,
+            lastLogin,
+            initialPassword: "administration"
+          });
+          saveAccounts(accounts);
+          return true;
+        }
+
+        adminForm?.addEventListener("submit", (event) => {
+          event.preventDefault();
+          const name = document.getElementById("full-name").value.trim();
+          const email = document.getElementById("email").value.trim();
+          const role = document.getElementById("role").value;
+
+          if (!name || !email) {
+            showAdminMessage("名前とメールアドレスを入力してください。", "error");
+            return;
+          }
+
+          const added = addAccount({
+            name,
+            email,
+            role,
+            status: "Pending first login",
+            lastLogin: "Not yet"
+          });
+
+          if (added) {
+            showAdminMessage("アカウントを追加しました。", "success");
+            renderDirectory();
+            adminForm.reset();
+          }
+        });
+
+        addAccountButton?.addEventListener("click", () => {
+          adminForm?.scrollIntoView({ behavior: "smooth" });
+          document.getElementById("full-name")?.focus();
+        });
+
+        renderDirectory();
+      })();
+    </script>
   </body>
 </html>
