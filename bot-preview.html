@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bot preview</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --panel: #111827;
+        --accent: #38bdf8;
+        --muted: #94a3b8;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: radial-gradient(circle at 12% 20%, rgba(56, 189, 248, 0.12), transparent 26%),
+          radial-gradient(circle at 82% 0%, rgba(56, 189, 248, 0.15), transparent 28%),
+          linear-gradient(135deg, #0f172a, #0b1224);
+        color: #e2e8f0;
+        min-height: 100vh;
+        padding: 1.5rem;
+      }
+      .shell {
+        max-width: 920px;
+        margin: 0 auto;
+        background: var(--panel);
+        border: 1px solid rgba(56, 189, 248, 0.16);
+        border-radius: 16px;
+        box-shadow: 0 18px 42px rgba(0, 0, 0, 0.35);
+        overflow: hidden;
+      }
+      header {
+        padding: 1.25rem 1.5rem;
+        background: linear-gradient(135deg, rgba(56, 189, 248, 0.14), rgba(56, 189, 248, 0.08));
+        border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 1.25rem;
+        letter-spacing: 0.01em;
+      }
+      header p {
+        margin: 0.1rem 0 0;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.45rem 0.7rem;
+        border-radius: 999px;
+        border: 1px solid rgba(56, 189, 248, 0.25);
+        background: rgba(56, 189, 248, 0.12);
+        color: #bae6fd;
+        font-weight: 700;
+      }
+      main {
+        padding: 1.25rem;
+        display: grid;
+        gap: 1rem;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
+      }
+      .chat-window {
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 14px;
+        background: #0b1224;
+        padding: 1rem;
+        display: grid;
+        gap: 0.75rem;
+        min-height: 380px;
+      }
+      .bubble {
+        padding: 0.85rem 0.95rem;
+        border-radius: 12px;
+        max-width: 640px;
+        line-height: 1.5;
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+      }
+      .from-user {
+        background: rgba(56, 189, 248, 0.12);
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        margin-left: auto;
+      }
+      .from-bot {
+        background: rgba(148, 163, 184, 0.14);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        color: #e5e7eb;
+      }
+      footer {
+        padding: 1.1rem 1.25rem;
+        display: grid;
+        gap: 0.65rem;
+        background: rgba(15, 23, 42, 0.72);
+        border-top: 1px solid rgba(56, 189, 248, 0.16);
+      }
+      .input-row {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+      }
+      .input-row input {
+        flex: 1 1 240px;
+        padding: 0.85rem 1rem;
+        border-radius: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        background: #0b1224;
+        color: #e2e8f0;
+        font-size: 1rem;
+      }
+      .input-row button {
+        padding: 0.85rem 1.1rem;
+        border-radius: 12px;
+        border: 1px solid rgba(56, 189, 248, 0.35);
+        background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+        color: #0b1224;
+        font-weight: 800;
+        cursor: pointer;
+        box-shadow: 0 12px 28px rgba(56, 189, 248, 0.35);
+      }
+      .meta {
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header>
+        <div>
+          <h1 id="bot-title">Bot preview</h1>
+          <p id="bot-description">チャットボットのプレビュー。ログイン不要で表示できます。</p>
+        </div>
+        <span class="pill" id="bot-pill">Public preview</span>
+      </header>
+      <main>
+        <div class="chat-window" aria-live="polite">
+          <div class="bubble from-user">このチャットボットは何ができますか？</div>
+          <div class="bubble from-bot" id="bot-answer">ナレッジベースから回答例を取得し、最新のステータスを返すデモです。</div>
+          <div class="bubble from-user">社内FAQと注文履歴を見てほしいです。</div>
+          <div class="bubble from-bot">はい、FAQと注文履歴を参照しながら要約を作成します。プレビューのためデータは保存されません。</div>
+        </div>
+      </main>
+      <footer>
+        <div class="input-row">
+          <input type="text" placeholder="プレビュー用の質問を入力（送信は保存されません）" aria-label="質問を入力" />
+          <button type="button">Send</button>
+        </div>
+        <div class="meta" id="meta-text">workspace preview · no external login required</div>
+      </footer>
+    </div>
+    <script>
+      (() => {
+        const params = new URLSearchParams(window.location.search);
+        const botId = (params.get("bot") || "workspace-bot").trim();
+
+        function formatName(id) {
+          if (!id) return "Workspace bot";
+          return id
+            .replace(/[-_]+/g, " ")
+            .replace(/\b\w/g, (c) => c.toUpperCase())
+            .trim();
+        }
+
+        const friendlyName = formatName(botId);
+        const title = document.getElementById("bot-title");
+        const description = document.getElementById("bot-description");
+        const pill = document.getElementById("bot-pill");
+        const meta = document.getElementById("meta-text");
+        const answer = document.getElementById("bot-answer");
+
+        if (title) title.textContent = `${friendlyName} プレビュー`;
+        if (description) description.textContent = `${friendlyName} の応答イメージを表示しています。外部ログインなしで誰でも確認できます。`;
+        if (pill) pill.textContent = `Preview: ${botId}`;
+        if (meta) meta.textContent = `${window.location.origin} · public preview`;
+        if (answer) {
+          answer.textContent = `${friendlyName} が回答例を生成しました。実際のデータは取得していませんが、共有用プレビューとしてサイトに埋め込めます。`;
+        }
+      })();
+    </script>
+  </body>
+</html>

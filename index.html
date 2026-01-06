@@ -133,7 +133,8 @@
         const sizeSelect = document.getElementById("home-embed-size");
         const codeArea = document.getElementById("home-embed-code");
         const preview = document.getElementById("home-widget-preview");
-        const botUrl = "https://workspace.run/bots/site-widget";
+        const previewOrigin = window.location.origin;
+        const botUrl = `${previewOrigin}/bot-preview.html?bot=site-widget`;
 
         function getSize(size) {
           const sizes = {

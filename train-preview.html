@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Train page preview</title>
+    <style>
+      :root {
+        --bg: #f4f6fb;
+        --panel: #ffffff;
+        --muted: #4b5563;
+        --accent: #0f172a;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--accent);
+      }
+      header {
+        background: #0f172a;
+        color: #ffffff;
+        padding: 1.4rem;
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      header h1 {
+        margin: 0;
+      }
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.4rem 0.65rem;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        background: rgba(255, 255, 255, 0.08);
+        color: #e2e8f0;
+        font-weight: 700;
+      }
+      main {
+        max-width: 960px;
+        margin: 1.5rem auto;
+        padding: 0 1.2rem 2rem;
+        display: grid;
+        gap: 1rem;
+      }
+      .card {
+        background: var(--panel);
+        border-radius: 14px;
+        border: 1px solid #e5e7eb;
+        padding: 1.25rem;
+        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        gap: 0.8rem;
+      }
+      .list-item {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 0.85rem 1rem;
+        background: linear-gradient(180deg, #ffffff, #f9fafb);
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.6rem;
+        border-radius: 999px;
+        background: #eef2ff;
+        color: #312e81;
+        font-weight: 700;
+        margin-right: 0.35rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1 id="train-title">TRAIN preview</h1>
+        <p id="train-subtitle" class="muted" style="margin: 0.35rem 0 0;">ログイン不要の学習データプレビューです。</p>
+      </div>
+      <span class="tag" id="train-tag">Public preview</span>
+    </header>
+    <main>
+      <div class="card">
+        <h3 style="margin: 0 0 0.3rem;">添付データ</h3>
+        <p class="muted" style="margin: 0 0 0.75rem;">デモ用のファイル一覧です。実際のアップロードは行われません。</p>
+        <ul class="list" id="file-list"></ul>
+      </div>
+      <div class="card">
+        <h3 style="margin: 0 0 0.3rem;">ノート</h3>
+        <p class="muted" id="train-note" style="margin: 0;">共有用のTRAINリンクです。AWSや他サービスへのログインは不要です。</p>
+      </div>
+    </main>
+    <script>
+      (() => {
+        const params = new URLSearchParams(window.location.search);
+        const botId = (params.get("bot") || "workspace-bot").trim();
+
+        function formatName(id) {
+          if (!id) return "Workspace bot";
+          return id
+            .replace(/[-_]+/g, " ")
+            .replace(/\b\w/g, (c) => c.toUpperCase())
+            .trim();
+        }
+
+        const friendlyName = formatName(botId);
+        const files = [
+          { title: "FAQ-dataset.pdf", tag: "PDF" },
+          { title: "release-notes.csv", tag: "CSV" },
+          { title: "api-handbook.md", tag: "Markdown" }
+        ];
+
+        document.getElementById("train-title").textContent = `${friendlyName} · TRAINプレビュー`;
+        document.getElementById("train-subtitle").textContent = `${friendlyName} の学習データをサンプルで表示しています。`;
+        document.getElementById("train-tag").textContent = `Preview: ${botId}`;
+        document.getElementById("train-note").textContent = `${window.location.origin} でホストされるプレビューのため、外部ログインなしで確認できます。`;
+
+        const list = document.getElementById("file-list");
+        files.forEach((file) => {
+          const li = document.createElement("li");
+          li.className = "list-item";
+          li.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+              <div>
+                <strong>${file.title}</strong>
+                <div class="muted">サンプルファイル</div>
+              </div>
+              <span class="pill">${file.tag}</span>
+            </div>
+          `;
+          list.appendChild(li);
+        });
+      })();
+    </script>
+  </body>
+</html>
