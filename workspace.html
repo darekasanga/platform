@@ -281,6 +281,38 @@
         flex-wrap: wrap;
         align-items: center;
       }
+      .tab-shell {
+        display: grid;
+        gap: 1rem;
+      }
+      .tablist {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+      .tablist button {
+        border-radius: 999px;
+        border: 1px solid #d1d5db;
+        background: #ffffff;
+        color: var(--text);
+        padding: 0.65rem 1.1rem;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+        transition: all 120ms ease-in-out;
+      }
+      .tablist button.active {
+        background: var(--accent);
+        color: #ffffff;
+        border-color: rgba(0, 85, 255, 0.35);
+        box-shadow: 0 12px 28px rgba(0, 85, 255, 0.22);
+      }
+      .tab-panel {
+        display: none;
+      }
+      .tab-panel.active {
+        display: block;
+      }
     </style>
   </head>
   <body>
@@ -326,204 +358,219 @@
         </div>
       </div>
 
-      <div class="grid">
-        <div class="card">
-          <div class="badge">Create</div>
-          <h3>AIチャットベースのWebアプリを作成</h3>
-          <p class="subtle">ユースケース・指示・モデルを入力すると、即座にワークスペースに追加されます。</p>
-          <form id="app-builder" class="stack">
-            <div class="field">
-              <label for="app-name">アプリ名</label>
-              <input id="app-name" name="app-name" type="text" placeholder="Customer Care Copilot" required />
-            </div>
-            <div class="field">
-              <label for="app-purpose">ユースケース / ゴール</label>
-              <textarea id="app-purpose" name="app-purpose" placeholder="FAQと注文履歴を元に、24時間のサポートチャットを提供する"></textarea>
-            </div>
-            <div class="field">
-              <label for="app-model">ベースモデル</label>
-              <select id="app-model" name="app-model">
-                <option value="gpt-4o-mini">GPT-4o mini (推奨)</option>
-                <option value="gpt-4o">GPT-4o</option>
-                <option value="claude-3.5">Claude 3.5 Sonnet</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="app-sources">データソース</label>
-              <input id="app-sources" name="app-sources" type="text" placeholder="Notion、FAQ、Postgres" />
-            </div>
-            <div class="actions">
-              <button type="submit">Create</button>
-              <button class="secondary" type="button" id="app-suggest">サンプルを読み込む</button>
-            </div>
-            <div class="message" id="create-message" role="status" aria-live="polite" style="display: none;"></div>
-          </form>
-          <div class="divider"></div>
-          <div class="stack">
-            <strong>最近作成したアプリ</strong>
-            <div id="app-list" class="list"></div>
-          </div>
+      <div class="tab-shell" aria-label="Workspace sections">
+        <div class="tablist" role="tablist">
+          <button class="active" role="tab" aria-selected="true" aria-controls="tab-create" data-tab="create">Create</button>
+          <button role="tab" aria-selected="false" aria-controls="tab-run" data-tab="run">Run</button>
+          <button role="tab" aria-selected="false" aria-controls="tab-share" data-tab="share">Share</button>
+          <button role="tab" aria-selected="false" aria-controls="tab-train" data-tab="train">Train</button>
         </div>
-
-        <div class="card">
-          <div class="badge">Run</div>
-          <h3>AIアプリを実行・デプロイ</h3>
-          <p class="subtle">作成したアプリを選んで即時にテスト実行。ラン結果は履歴に残ります。</p>
-          <div class="stack">
-            <div class="field">
-              <label for="app-select">実行するアプリ</label>
-              <select id="app-select" name="app-select"></select>
-            </div>
-            <div class="field">
-              <label for="deploy-target">公開先</label>
-              <select id="deploy-target" name="deploy-target">
-                <option value="preview">プレビュー (ログイン不要)</option>
-                <option value="staging">Staging</option>
-                <option value="production">Production</option>
-              </select>
-            </div>
-            <div class="actions">
-              <button type="button" id="run-app">Run</button>
-              <button class="secondary" type="button" id="deploy-app">Deploy</button>
-            </div>
-            <div class="message" id="run-message" role="status" aria-live="polite" style="display: none;"></div>
-          </div>
-          <div class="divider"></div>
-          <div class="stack">
-            <strong>Run履歴</strong>
-            <ul id="run-history" class="list"></ul>
-          </div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="badge">Share</div>
-        <h3>ボットの共有と埋め込み</h3>
-        <p class="subtle">ホームページ右下のポップアップ、別ウィンドウ表示、TRAINページリンクをワンクリックで発行できます。</p>
-        <div class="grid">
-          <div class="stack">
-            <div class="field">
-              <label for="share-bot">共有するボット</label>
-              <select id="share-bot" name="share-bot"></select>
-            </div>
-            <div class="field">
-              <label>ポップアップサイズ</label>
-              <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-                <label style="display: flex; align-items: center; gap: 0.25rem;"><input type="radio" name="bot-size" value="small" /> Small (320×420)</label>
-                <label style="display: flex; align-items: center; gap: 0.25rem;"><input type="radio" name="bot-size" value="medium" checked /> Medium (360×520)</label>
-                <label style="display: flex; align-items: center; gap: 0.25rem;"><input type="radio" name="bot-size" value="large" /> Large (420×640)</label>
-              </div>
-            </div>
-            <div class="code-actions">
-              <button type="button" id="copy-embed">埋め込みコードをコピー</button>
-              <button type="button" class="secondary" id="bot-window-button">別ウィンドウでボットを開く</button>
-              <button type="button" class="secondary" id="copy-train-share">TRAINコードをコピー</button>
-              <button type="button" class="secondary" id="open-train-window">TRAINページを開く</button>
-            </div>
-            <p class="muted" id="bot-url-display" style="margin: 0.25rem 0 0.65rem;"></p>
-            <label for="embed-code" style="font-weight: 700; color: var(--text);">HTMLに貼り付けるコード</label>
-            <textarea id="embed-code" class="code-area" readonly aria-label="ボット埋め込みコード"></textarea>
-            <div class="divider"></div>
-            <label for="train-embed-share" style="font-weight: 700; color: var(--text);">TRAINページを新規ウィンドウで開くコード</label>
-            <textarea id="train-embed-share" class="code-area" readonly aria-label="TRAINページ埋め込みコード"></textarea>
-            <div id="share-message" class="message" style="display: none;"></div>
-          </div>
-          <div class="embed-preview">
-            <div id="bot-preview-label" class="muted" style="margin-bottom: 0.5rem;">プレビュー</div>
-            <div id="bot-popup-preview" class="embed-floating"></div>
-          </div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="badge">Train</div>
-        <h3>チャットボットの学習データベース</h3>
-        <p class="subtle">作成済みボットごとに学習データをフォルダ管理で保存します。URLと紐づけて整理できます。</p>
-        <div class="stack">
-          <div class="field">
-            <label for="dataset-bot">ボットを選択</label>
-            <select id="dataset-bot" name="dataset-bot"></select>
-          </div>
-          <div class="grid">
-            <div class="stack">
-              <strong>フォルダを追加</strong>
-              <form id="folder-form" class="stack">
+        <div class="tab-panels">
+          <div class="tab-panel active" id="tab-create" data-tab="create" role="tabpanel">
+            <div class="card">
+              <div class="badge">Create</div>
+              <h3>AIチャットベースのWebアプリを作成</h3>
+              <p class="subtle">ユースケース・指示・モデルを入力すると、即座にワークスペースに追加されます。</p>
+              <form id="app-builder" class="stack">
                 <div class="field">
-                  <label for="folder-name">フォルダ名</label>
-                  <input id="folder-name" name="folder-name" type="text" placeholder="FAQ, Product docs, Onboarding" />
-                </div>
-                <div class="actions">
-                  <button type="submit">フォルダを追加</button>
-                </div>
-              </form>
-            </div>
-            <div class="stack">
-              <strong>学習データを登録</strong>
-              <form id="dataset-form" class="stack">
-                <div class="field">
-                  <label for="dataset-title">データ名</label>
-                  <input id="dataset-title" name="dataset-title" type="text" placeholder="API v2 docs" required />
+                  <label for="app-name">アプリ名</label>
+                  <input id="app-name" name="app-name" type="text" placeholder="Customer Care Copilot" required />
                 </div>
                 <div class="field">
-                  <label for="dataset-source">データソース / メモ</label>
-                  <textarea id="dataset-source" name="dataset-source" placeholder="Notion: API handbook、S3: api-v2.zip"></textarea>
+                  <label for="app-purpose">ユースケース / ゴール</label>
+                  <textarea id="app-purpose" name="app-purpose" placeholder="FAQと注文履歴を元に、24時間のサポートチャットを提供する"></textarea>
                 </div>
                 <div class="field">
-                  <label for="dataset-filetype">ファイルタイプ</label>
-                  <select id="dataset-filetype" name="dataset-filetype">
-                    <option value="pdf">PDF</option>
-                    <option value="doc">Word / DOC</option>
-                    <option value="excel">Excel / CSV</option>
-                    <option value="image">画像 (PNG/JPEG/GIF)</option>
-                    <option value="zip">ZIP (まとめてアップロード)</option>
-                    <option value="other">その他</option>
+                  <label for="app-model">ベースモデル</label>
+                  <select id="app-model" name="app-model">
+                    <option value="gpt-4o-mini">GPT-4o mini (推奨)</option>
+                    <option value="gpt-4o">GPT-4o</option>
+                    <option value="claude-3.5">Claude 3.5 Sonnet</option>
                   </select>
                 </div>
                 <div class="field">
-                  <label for="dataset-files">ファイルを添付</label>
-                  <input id="dataset-files" name="dataset-files" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.gif,.zip" />
-                  <p class="subtle" style="margin: 0;">PDF / DOC / EXCEL / 画像 / ZIP をまとめてドラッグ＆ドロップできます。</p>
-                </div>
-                <div class="field">
-                  <label for="dataset-folder">保存先フォルダ</label>
-                  <select id="dataset-folder" name="dataset-folder"></select>
+                  <label for="app-sources">データソース</label>
+                  <input id="app-sources" name="app-sources" type="text" placeholder="Notion、FAQ、Postgres" />
                 </div>
                 <div class="actions">
-                  <button type="submit">データを追加</button>
+                  <button type="submit">Create</button>
+                  <button class="secondary" type="button" id="app-suggest">サンプルを読み込む</button>
                 </div>
+                <div class="message" id="create-message" role="status" aria-live="polite" style="display: none;"></div>
               </form>
+              <div class="divider"></div>
+              <div class="stack">
+                <strong>最近作成したアプリ</strong>
+                <div id="app-list" class="list"></div>
+              </div>
             </div>
           </div>
-          <div class="divider"></div>
-          <div class="stack">
-            <strong>フォルダ一覧</strong>
-            <div id="folder-list" class="folder-grid"></div>
-          </div>
-          <div class="divider"></div>
-          <div class="stack">
-            <strong>データベース</strong>
-            <table class="dataset-table">
-              <thead>
-                <tr>
-                  <th>データ名</th>
-                  <th>ファイル</th>
-                  <th>フォルダ</th>
-                  <th>メモ</th>
-                  <th>登録日時</th>
-                </tr>
-              </thead>
-              <tbody id="dataset-table-body"></tbody>
-            </table>
-            <div id="dataset-empty" class="dataset-empty" style="display: none;">まだデータがありません。フォルダを選んで登録してください。</div>
-          </div>
-          <div class="divider"></div>
-          <div class="stack">
-            <strong>TRAINページリンク</strong>
-            <p class="subtle">ボットごとのTRAINページを新規ウィンドウや外部サイトから開けます。</p>
-            <div class="code-actions">
-              <button type="button" id="copy-train-embed" class="secondary">TRAIN埋め込みコードをコピー</button>
+          <div class="tab-panel" id="tab-run" data-tab="run" role="tabpanel">
+            <div class="card">
+              <div class="badge">Run</div>
+              <h3>AIアプリを実行・デプロイ</h3>
+              <p class="subtle">作成したアプリを選んで即時にテスト実行。ラン結果は履歴に残ります。</p>
+              <div class="stack">
+                <div class="field">
+                  <label for="app-select">実行するアプリ</label>
+                  <select id="app-select" name="app-select"></select>
+                </div>
+                <div class="field">
+                  <label for="deploy-target">公開先</label>
+                  <select id="deploy-target" name="deploy-target">
+                    <option value="preview">プレビュー (ログイン不要)</option>
+                    <option value="staging">Staging</option>
+                    <option value="production">Production</option>
+                  </select>
+                </div>
+                <div class="actions">
+                  <button type="button" id="run-app">Run</button>
+                  <button class="secondary" type="button" id="deploy-app">Deploy</button>
+                </div>
+                <div class="message" id="run-message" role="status" aria-live="polite" style="display: none;"></div>
+              </div>
+              <div class="divider"></div>
+              <div class="stack">
+                <strong>Run履歴</strong>
+                <ul id="run-history" class="list"></ul>
+              </div>
             </div>
-            <textarea id="train-embed-code" class="code-area" readonly aria-label="TRAINページの埋め込みコード"></textarea>
           </div>
-          <div class="message" id="dataset-message" role="status" aria-live="polite" style="display: none;"></div>
+          <div class="tab-panel" id="tab-share" data-tab="share" role="tabpanel">
+            <div class="card">
+              <div class="badge">Share</div>
+              <h3>ボットの共有と埋め込み</h3>
+              <p class="subtle">ホームページ右下のポップアップ、別ウィンドウ表示、TRAINページリンクをワンクリックで発行できます。</p>
+              <div class="grid">
+                <div class="stack">
+                  <div class="field">
+                    <label for="share-bot">共有するボット</label>
+                    <select id="share-bot" name="share-bot"></select>
+                  </div>
+                  <div class="field">
+                    <label>ポップアップサイズ</label>
+                    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                      <label style="display: flex; align-items: center; gap: 0.25rem;"><input type="radio" name="bot-size" value="small" /> Small (320×420)</label>
+                      <label style="display: flex; align-items: center; gap: 0.25rem;"><input type="radio" name="bot-size" value="medium" checked /> Medium (360×520)</label>
+                      <label style="display: flex; align-items: center; gap: 0.25rem;"><input type="radio" name="bot-size" value="large" /> Large (420×640)</label>
+                    </div>
+                  </div>
+                  <div class="code-actions">
+                    <button type="button" id="copy-embed">埋め込みコードをコピー</button>
+                    <button type="button" class="secondary" id="bot-window-button">別ウィンドウでボットを開く</button>
+                    <button type="button" class="secondary" id="copy-train-share">TRAINコードをコピー</button>
+                    <button type="button" class="secondary" id="open-train-window">TRAINページを開く</button>
+                  </div>
+                  <p class="muted" id="bot-url-display" style="margin: 0.25rem 0 0.65rem;"></p>
+                  <label for="embed-code" style="font-weight: 700; color: var(--text);">HTMLに貼り付けるコード</label>
+                  <textarea id="embed-code" class="code-area" readonly aria-label="ボット埋め込みコード"></textarea>
+                  <div class="divider"></div>
+                  <label for="train-embed-share" style="font-weight: 700; color: var(--text);">TRAINページを新規ウィンドウで開くコード</label>
+                  <textarea id="train-embed-share" class="code-area" readonly aria-label="TRAINページ埋め込みコード"></textarea>
+                  <div id="share-message" class="message" style="display: none;"></div>
+                </div>
+                <div class="embed-preview">
+                  <div id="bot-preview-label" class="muted" style="margin-bottom: 0.5rem;">プレビュー</div>
+                  <div id="bot-popup-preview" class="embed-floating"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="tab-panel" id="tab-train" data-tab="train" role="tabpanel">
+            <div class="card">
+              <div class="badge">Train</div>
+              <h3>チャットボットの学習データベース</h3>
+              <p class="subtle">作成済みボットごとに学習データをフォルダ管理で保存します。URLと紐づけて整理できます。</p>
+              <div class="stack">
+                <div class="field">
+                  <label for="dataset-bot">ボットを選択</label>
+                  <select id="dataset-bot" name="dataset-bot"></select>
+                </div>
+                <div class="grid">
+                  <div class="stack">
+                    <strong>フォルダを追加</strong>
+                    <form id="folder-form" class="stack">
+                      <div class="field">
+                        <label for="folder-name">フォルダ名</label>
+                        <input id="folder-name" name="folder-name" type="text" placeholder="FAQ, Product docs, Onboarding" />
+                      </div>
+                      <div class="actions">
+                        <button type="submit">フォルダを追加</button>
+                      </div>
+                    </form>
+                  </div>
+                  <div class="stack">
+                    <strong>学習データを登録</strong>
+                    <form id="dataset-form" class="stack">
+                      <div class="field">
+                        <label for="dataset-title">データ名</label>
+                        <input id="dataset-title" name="dataset-title" type="text" placeholder="API v2 docs" required />
+                      </div>
+                      <div class="field">
+                        <label for="dataset-source">データソース / メモ</label>
+                        <textarea id="dataset-source" name="dataset-source" placeholder="Notion: API handbook、S3: api-v2.zip"></textarea>
+                      </div>
+                      <div class="field">
+                        <label for="dataset-filetype">ファイルタイプ</label>
+                        <select id="dataset-filetype" name="dataset-filetype">
+                          <option value="pdf">PDF</option>
+                          <option value="doc">Word / DOC</option>
+                          <option value="excel">Excel / CSV</option>
+                          <option value="image">画像 (PNG/JPEG/GIF)</option>
+                          <option value="zip">ZIP (まとめてアップロード)</option>
+                          <option value="other">その他</option>
+                        </select>
+                      </div>
+                      <div class="field">
+                        <label for="dataset-files">ファイルを添付</label>
+                        <input id="dataset-files" name="dataset-files" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.gif,.zip" />
+                        <p class="subtle" style="margin: 0;">PDF / DOC / EXCEL / 画像 / ZIP をまとめてドラッグ＆ドロップできます。</p>
+                      </div>
+                      <div class="field">
+                        <label for="dataset-folder">保存先フォルダ</label>
+                        <select id="dataset-folder" name="dataset-folder"></select>
+                      </div>
+                      <div class="actions">
+                        <button type="submit">データを追加</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+                <div class="divider"></div>
+                <div class="stack">
+                  <strong>フォルダ一覧</strong>
+                  <div id="folder-list" class="folder-grid"></div>
+                </div>
+                <div class="divider"></div>
+                <div class="stack">
+                  <strong>データベース</strong>
+                  <table class="dataset-table">
+                    <thead>
+                      <tr>
+                        <th>データ名</th>
+                        <th>ファイル</th>
+                        <th>フォルダ</th>
+                        <th>メモ</th>
+                        <th>登録日時</th>
+                      </tr>
+                    </thead>
+                    <tbody id="dataset-table-body"></tbody>
+                  </table>
+                  <div id="dataset-empty" class="dataset-empty" style="display: none;">まだデータがありません。フォルダを選んで登録してください。</div>
+                </div>
+                <div class="divider"></div>
+                <div class="stack">
+                  <strong>TRAINページリンク</strong>
+                  <p class="subtle">ボットごとのTRAINページを新規ウィンドウや外部サイトから開けます。</p>
+                  <div class="code-actions">
+                    <button type="button" id="copy-train-embed" class="secondary">TRAIN埋め込みコードをコピー</button>
+                  </div>
+                  <textarea id="train-embed-code" class="code-area" readonly aria-label="TRAINページの埋め込みコード"></textarea>
+                </div>
+                <div class="message" id="dataset-message" role="status" aria-live="polite" style="display: none;"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </main>
@@ -583,8 +630,25 @@
         const datasetMessage = document.getElementById("dataset-message");
         const copyTrainEmbedButton = document.getElementById("copy-train-embed");
         const trainEmbedDatasetOutput = document.getElementById("train-embed-code");
+        const tabButtons = Array.from(document.querySelectorAll(".tablist button"));
+        const tabPanels = Array.from(document.querySelectorAll(".tab-panel"));
         let selectedDatasetAppId = null;
         let selectedShareAppId = null;
+
+        function activateTab(target) {
+          const tabId = target || "create";
+          tabButtons.forEach((button) => {
+            const isActive = button.dataset.tab === tabId;
+            button.classList.toggle("active", isActive);
+            button.setAttribute("aria-selected", isActive ? "true" : "false");
+            button.setAttribute("tabindex", isActive ? "0" : "-1");
+          });
+          tabPanels.forEach((panel) => {
+            const isActive = panel.dataset.tab === tabId;
+            panel.classList.toggle("active", isActive);
+            panel.hidden = !isActive;
+          });
+        }
 
         function getSession() {
           const inMemory = sessionStorage.getItem(SESSION_KEY);
@@ -1017,6 +1081,11 @@
             trainEmbedDatasetOutput.value = buildTrainEmbedCode(selectedApp);
           }
         }
+
+        tabButtons.forEach((button) => {
+          button.addEventListener("click", () => activateTab(button.dataset.tab));
+        });
+        activateTab(tabButtons.find((btn) => btn.classList.contains("active"))?.dataset.tab || "create");
 
         appBuilderForm?.addEventListener("submit", (event) => {
           event.preventDefault();
