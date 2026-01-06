@@ -594,6 +594,67 @@
         border: 1px solid #d1d5db;
         box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
       }
+      .bot-icon-tray {
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .bot-icon-button {
+        display: inline-grid;
+        gap: 0.35rem;
+        justify-items: center;
+        padding: 0.4rem 0.55rem;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        background: #ffffff;
+        cursor: pointer;
+        min-width: 86px;
+        transition: transform 120ms ease-in-out, box-shadow 120ms ease-in-out, border-color 120ms ease-in-out;
+      }
+      .bot-icon-button.active {
+        border-color: #0ea5e9;
+        box-shadow: 0 10px 22px rgba(14, 165, 233, 0.18);
+        transform: translateY(-1px);
+      }
+      .bot-icon-circle {
+        width: 48px;
+        height: 48px;
+        border-radius: 16px;
+        display: grid;
+        place-items: center;
+        font-weight: 800;
+        letter-spacing: 0.01em;
+      }
+      .bot-icon-button span {
+        font-size: 0.85rem;
+        color: var(--text);
+        font-weight: 700;
+        text-align: center;
+      }
+      .detail-icon-preview {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0.75rem;
+        align-items: center;
+        padding: 0.65rem;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        background: #f8fafc;
+      }
+      .detail-icon-image {
+        width: 72px;
+        height: 72px;
+        border-radius: 18px;
+        border: 1px solid #d1d5db;
+        background: #ffffff;
+        box-shadow: 0 10px 22px rgba(0, 0, 0, 0.08);
+      }
+      .detail-icon-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
     </style>
   </head>
   <body>
@@ -736,11 +797,19 @@
                     <div id="detail-model" class="pill" style="margin:0; width: fit-content;">-</div>
                   </div>
                   <div class="detail-row">
+                    <span class="detail-label">アイコンで選択</span>
+                    <div id="bot-icon-tray" class="bot-icon-tray" role="listbox" aria-label="チャットボットをアイコンで選択"></div>
+                  </div>
+                  <div class="detail-row">
                     <span class="detail-label">データソース</span>
                     <div id="detail-sources" class="theme-preview" style="width: fit-content;">
                       <span class="theme-dot" style="background:#d1d5db;"></span>
                       <span id="detail-source-text">-</span>
                     </div>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">学習データの概要</span>
+                    <div class="detail-note" id="detail-learning-summary" style="margin:0;">-</div>
                   </div>
                   <div class="detail-row">
                     <span class="detail-label">登録外の質問への回答</span>
@@ -776,6 +845,19 @@
                     <div class="detail-theme" id="detail-theme-chip">
                       <span id="detail-theme-dot" class="theme-dot" style="background:#0ea5e9;"></span>
                       <span id="detail-theme-text">-</span>
+                    </div>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">チャットボットのアイコン</span>
+                    <div class="detail-icon-preview">
+                      <img id="detail-icon-image" class="detail-icon-image" alt="選択中のチャットボットのアイコン" />
+                      <div class="stack">
+                        <div class="detail-icon-actions">
+                          <button type="button" id="download-icon-button">アイコンをダウンロード</button>
+                          <button type="button" class="secondary" id="copy-icon-button">データURLをコピー</button>
+                        </div>
+                        <p class="subtle" style="margin:0;">名前とテーマカラーから自動生成したアイコンを保存できます。</p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1157,6 +1239,7 @@
         const detailSources = document.getElementById("detail-sources");
         const detailSourceText = document.getElementById("detail-source-text");
         const detailFallback = document.getElementById("detail-fallback");
+        const detailLearningSummary = document.getElementById("detail-learning-summary");
         const detailPreviewUrl = document.getElementById("detail-preview-url");
         const detailTrainUrl = document.getElementById("detail-train-url");
         const detailThemeChip = document.getElementById("detail-theme-chip");
@@ -1170,6 +1253,10 @@
         const detailCopyTrainButton = document.getElementById("detail-copy-train");
         const detailOpenPreviewButton = document.getElementById("detail-open-preview");
         const detailOpenTrainButton = document.getElementById("detail-open-train");
+        const botIconTray = document.getElementById("bot-icon-tray");
+        const detailIconImage = document.getElementById("detail-icon-image");
+        const downloadIconButton = document.getElementById("download-icon-button");
+        const copyIconButton = document.getElementById("copy-icon-button");
         const tabButtons = Array.from(document.querySelectorAll(".tablist button"));
         const tabPanels = Array.from(document.querySelectorAll(".tab-panel"));
         const previewImage = document.getElementById("preview-image");
@@ -1827,6 +1914,98 @@
           applyPreviewZoom(defaultZoom);
         }
 
+        function getBotInitials(name) {
+          if (!name) return "BOT";
+          const parts = name.trim().split(/\s+/);
+          if (parts.length >= 2) {
+            return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase() || "BOT";
+          }
+          return (parts[0][0] || "B").toUpperCase();
+        }
+
+        function buildBotIconDataUrl(app) {
+          const theme = getTheme(app?.theme);
+          const glyph = getBotInitials(app?.name);
+          const textColor = getAccessibleTextColor(theme.accent);
+          const safeName = (app?.name || "Bot").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+          const svg = `
+            <svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'>
+              <defs>
+                <linearGradient id='bg' x1='0%' y1='0%' x2='100%' y2='100%'>
+                  <stop offset='0%' stop-color='${theme.accent}' stop-opacity='0.88'/>
+                  <stop offset='100%' stop-color='${theme.accent}' stop-opacity='0.62'/>
+                </linearGradient>
+              </defs>
+              <rect x='10' y='10' width='140' height='140' rx='32' fill='url(#bg)'/>
+              <text x='50%' y='52%' font-family='Inter, system-ui' font-size='64' font-weight='800' fill='${textColor}' text-anchor='middle' dominant-baseline='middle'>${glyph}</text>
+              <text x='50%' y='126' font-family='Inter, system-ui' font-size='14' font-weight='700' fill='${textColor}cc' text-anchor='middle'>${safeName}</text>
+            </svg>
+          `;
+          return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+        }
+
+        function renderBotIconPreview(app) {
+          if (!detailIconImage) return;
+          if (!app) {
+            detailIconImage.src = createPlaceholderPreview("Bot icon");
+            detailIconImage.alt = "チャットボットが未選択です";
+            detailIconImage.dataset.icon = "";
+            return;
+          }
+          const dataUrl = buildBotIconDataUrl(app);
+          detailIconImage.src = dataUrl;
+          detailIconImage.alt = `${app.name} のアイコン`;
+          detailIconImage.dataset.icon = dataUrl;
+        }
+
+        function summarizeDatasetForDetail(appId) {
+          if (!appId) return "学習データが見つかりません。";
+          const dataset = ensureDataset(appId);
+          if (!dataset?.entries?.length) return "まだ学習データがありません。Trainタブで追加してください。";
+          const latest = dataset.entries.slice().sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt));
+          const topics = latest.slice(0, 3).map((entry) => entry.title);
+          const files = latest
+            .slice(0, 2)
+            .flatMap((entry) => Array.isArray(entry.files) ? entry.files : [])
+            .map((file) => file.name)
+            .filter(Boolean);
+          const topicText = topics.length ? `最近追加: ${topics.join(" / ")}` : "";
+          const fileText = files.length ? `添付: ${files.join(", ")}` : "添付なしのデータも含みます。";
+          return [topicText, fileText].filter(Boolean).join(" ｜ ");
+        }
+
+        function renderBotIconTray() {
+          if (!botIconTray) return;
+          const apps = getApps();
+          botIconTray.innerHTML = "";
+          if (!apps.length) {
+            const empty = document.createElement("div");
+            empty.className = "muted";
+            empty.textContent = "チャットボットがありません。Createタブから追加してください。";
+            botIconTray.appendChild(empty);
+            return;
+          }
+          apps.forEach((app) => {
+            const theme = getTheme(app.theme);
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "bot-icon-button";
+            button.setAttribute("role", "option");
+            button.setAttribute("aria-label", `${app.name} を選択`);
+            button.dataset.appId = app.id;
+            button.innerHTML = `
+              <div class="bot-icon-circle" style="background:${theme.accent}; color:${getAccessibleTextColor(theme.accent)};">${getBotInitials(app.name)}</div>
+              <span>${app.name}</span>
+            `;
+            if (activeAppId === app.id) {
+              button.classList.add("active");
+              button.setAttribute("aria-selected", "true");
+            }
+            button.addEventListener("click", () => updateActiveApp(app.id));
+            botIconTray.appendChild(button);
+          });
+        }
+
         function renderDatasetDetails(entry, dataset) {
           if (!datasetDetailTitle || !datasetDetailLearning || !datasetDetailFiles || !datasetDetailFileType) return;
           if (!entry) {
@@ -1992,6 +2171,7 @@
             if (detailMessage) {
               detailMessage.style.display = "none";
             }
+            renderBotIconTray();
             return;
           }
           if (detailMessage) {
@@ -2003,6 +2183,7 @@
           if (detailName) detailName.textContent = app.name;
           if (detailPurpose) detailPurpose.textContent = app.purpose || "用途メモがあるとここに表示されます。";
           if (detailModel) detailModel.textContent = app.model || "GPT-4o mini";
+          if (detailLearningSummary) detailLearningSummary.textContent = summarizeDatasetForDetail(app.id);
           if (detailSources) {
             const dot = detailSources.querySelector(".theme-dot");
             if (dot) dot.style.background = theme.accent;
@@ -2033,6 +2214,8 @@
             detailPreviewImage.src = createPlaceholderPreview(`${app.name} (${theme.label})`, theme.accent);
             detailPreviewImage.alt = `${app.name} のプレビュー (${theme.label})`;
           }
+          renderBotIconPreview(app);
+          renderBotIconTray();
         }
 
         function showMessage(target, text, type = "success") {
@@ -2415,6 +2598,33 @@
           const app = getAppById(activeAppId);
           if (!app?.trainUrl) return;
           window.open(app.trainUrl, "_blank", "width=1200,height=780");
+        });
+
+        downloadIconButton?.addEventListener("click", () => {
+          if (!activeAppId) return;
+          const app = getAppById(activeAppId);
+          const iconSrc = detailIconImage?.dataset.icon;
+          if (!app || !iconSrc) {
+            showMessage(detailMessage, "アイコンの生成に失敗しました。", "error");
+            return;
+          }
+          const link = document.createElement("a");
+          link.href = iconSrc;
+          link.download = `${createSlug(app.name)}-icon.svg`;
+          link.click();
+          showMessage(detailMessage, "アイコンをダウンロードしました。", "success");
+        });
+
+        copyIconButton?.addEventListener("click", () => {
+          const iconSrc = detailIconImage?.dataset.icon;
+          if (!iconSrc) {
+            showMessage(detailMessage, "コピーするアイコンがありません。", "error");
+            return;
+          }
+          navigator.clipboard
+            ?.writeText(iconSrc)
+            .then(() => showMessage(detailMessage, "アイコンのデータURLをコピーしました。", "success"))
+            .catch(() => showMessage(detailMessage, "コピーに失敗しました。", "error"));
         });
 
         saveSelectedThemeButton?.addEventListener("click", () => {
