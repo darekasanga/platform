@@ -119,6 +119,22 @@
         background: #e2e8f0;
         box-shadow: 0 12px 24px rgba(248, 250, 252, 0.25);
       }
+      .message {
+        margin-top: 0.75rem;
+        padding: 0.85rem 1rem;
+        border-radius: 10px;
+        font-weight: 700;
+      }
+      .message.success {
+        background: rgba(16, 185, 129, 0.12);
+        border: 1px solid rgba(16, 185, 129, 0.4);
+        color: #064e3b;
+      }
+      .message.error {
+        background: rgba(239, 68, 68, 0.12);
+        border: 1px solid rgba(239, 68, 68, 0.4);
+        color: #7f1d1d;
+      }
       .back-link {
         display: inline-block;
         margin-top: 1rem;
@@ -139,7 +155,7 @@
         <div class="card">
           <h1>Log in</h1>
           <p class="subtitle">Access your account to continue to your workspace.</p>
-          <form>
+          <form id="login-form">
             <label for="email">Email</label>
             <input type="email" id="email" name="email" placeholder="you@example.com" required />
 
@@ -159,7 +175,7 @@
         <div class="card accent">
           <h1>Create account</h1>
           <p class="subtitle">New to Platform? Register to launch and monitor your workflows.</p>
-          <form>
+          <form id="signup-form">
             <label for="full-name">Full name</label>
             <input type="text" id="full-name" name="full-name" placeholder="Alex Doe" required />
 
@@ -174,9 +190,93 @@
 
             <button type="submit">Create account</button>
           </form>
+          <div class="message" id="signup-message" role="status" aria-live="polite"></div>
           <p class="fine-print">By creating an account, you agree to our acceptable use policy.</p>
         </div>
       </div>
     </div>
+    <script>
+      (() => {
+        const STORAGE_KEY = "platformAccounts";
+        const SEED_ACCOUNTS = [
+          { name: "Patricia Ortega", email: "patricia@acme.io", role: "Administrator", status: "Active", lastLogin: "2 hours ago", initialPassword: "administration" },
+          { name: "Devon King", email: "devon.king@acme.io", role: "Workspace Manager", status: "Password reset pending", lastLogin: "Yesterday", initialPassword: "administration" },
+          { name: "Helena Rossi", email: "helena.rossi@acme.io", role: "Analyst", status: "Active", lastLogin: "Aug 12", initialPassword: "administration" }
+        ];
+
+        const signupForm = document.getElementById("signup-form");
+        const messageEl = document.getElementById("signup-message");
+
+        function loadAccounts() {
+          try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            return stored ? JSON.parse(stored) : [];
+          } catch (error) {
+            console.error("Unable to read stored accounts", error);
+            return [];
+          }
+        }
+
+        function saveAccounts(list) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+        }
+
+        function getAccounts() {
+          const existing = loadAccounts();
+          if (existing.length) return existing;
+          saveAccounts(SEED_ACCOUNTS);
+          return [...SEED_ACCOUNTS];
+        }
+
+        function addAccount({ name, email, role, status, lastLogin }) {
+          const accounts = getAccounts();
+          accounts.push({
+            id: crypto.randomUUID ? crypto.randomUUID() : `acct-${Date.now()}`,
+            name,
+            email,
+            role,
+            status,
+            lastLogin,
+            initialPassword: "administration"
+          });
+          saveAccounts(accounts);
+        }
+
+        function showMessage(text, type) {
+          if (!messageEl) return;
+          messageEl.textContent = text;
+          messageEl.className = `message ${type}`;
+        }
+
+        signupForm?.addEventListener("submit", (event) => {
+          event.preventDefault();
+          const name = document.getElementById("full-name").value.trim();
+          const email = document.getElementById("signup-email").value.trim();
+          const password = document.getElementById("signup-password").value;
+          const confirm = document.getElementById("signup-confirm").value;
+
+          if (!name || !email) {
+            showMessage("名前とメールアドレスを入力してください。", "error");
+            return;
+          }
+
+          if (password !== confirm) {
+            showMessage("パスワードが一致しません。", "error");
+            return;
+          }
+
+          addAccount({
+            name,
+            email,
+            role: "Workspace Manager",
+            status: "Pending first login",
+            lastLogin: "Not yet"
+          });
+
+          showMessage("アカウントを作成しました。管理ページで確認できます。", "success");
+          signupForm.reset();
+        });
+      })();
+    </script>
   </body>
 </html>
