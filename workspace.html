@@ -377,7 +377,7 @@
             <div class="field">
               <label for="deploy-target">公開先</label>
               <select id="deploy-target" name="deploy-target">
-                <option value="preview">プレビュー (workspace.run)</option>
+                <option value="preview">プレビュー (ログイン不要)</option>
                 <option value="staging">Staging</option>
                 <option value="production">Production</option>
               </select>
@@ -536,6 +536,9 @@
         const APP_STORAGE_KEY = "platformAiApps";
         const RUN_STORAGE_KEY = "platformAiRuns";
         const DATASET_STORAGE_KEY = "platformBotDatasets";
+        const PREVIEW_ORIGIN = window.location.origin;
+        const BOT_PREVIEW_PATH = "/bot-preview.html";
+        const TRAIN_PREVIEW_PATH = "/train-preview.html";
 
         const welcomeEl = document.getElementById("welcome");
         const nameEl = document.getElementById("user-name");
@@ -668,7 +671,7 @@
               purpose: "FAQと注文履歴を用いて、顧客からの質問に24時間回答するチャットを提供",
               model: "GPT-4o mini",
               sources: "Notion FAQ, Order DB",
-              url: "https://workspace.run/bots/customer-care-copilot",
+              url: `${PREVIEW_ORIGIN}${BOT_PREVIEW_PATH}?bot=customer-care-copilot`,
               createdAt: new Date().toISOString()
             }
           ];
@@ -676,11 +679,11 @@
           let mutated = false;
           const enhanced = apps.map((app) => {
             const enriched = { ...app };
-            if (!enriched.url) {
+            if (!enriched.url || enriched.url.includes("workspace.run")) {
               enriched.url = createAppUrl(enriched.name);
               mutated = true;
             }
-            if (!enriched.trainUrl) {
+            if (!enriched.trainUrl || enriched.trainUrl.includes("workspace.run")) {
               enriched.trainUrl = createTrainUrl(enriched.name);
               mutated = true;
             }
@@ -721,12 +724,12 @@
         function createAppUrl(name) {
           const slug = createSlug(name);
           const suffix = Math.floor(Math.random() * 9000 + 1000);
-          return `https://workspace.run/bots/${slug}-${suffix}`;
+          return `${PREVIEW_ORIGIN}${BOT_PREVIEW_PATH}?bot=${slug}-${suffix}`;
         }
 
         function createTrainUrl(name) {
           const slug = createSlug(name);
-          return `https://workspace.run/train/${slug}`;
+          return `${PREVIEW_ORIGIN}${TRAIN_PREVIEW_PATH}?bot=${slug}`;
         }
 
         function renderApps() {
