@@ -385,6 +385,70 @@
         border-radius: 10px;
         border: 1px solid rgba(14, 165, 233, 0.25);
       }
+      .image-preview {
+        display: grid;
+        gap: 0.65rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 0.85rem;
+        background: linear-gradient(180deg, #ffffff, #f8fafc);
+      }
+      .preview-toolbar {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .preview-controls {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .preview-controls label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .preview-controls input[type="range"] {
+        accent-color: var(--accent);
+      }
+      .preview-meta {
+        color: var(--muted);
+        font-weight: 700;
+      }
+      .image-preview-frame {
+        position: relative;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 0.75rem;
+        min-height: 220px;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+      }
+      .image-preview-frame img {
+        max-width: 100%;
+        max-height: 320px;
+        border-radius: 10px;
+        transition: transform 120ms ease-in-out;
+        box-shadow: 0 14px 32px rgba(15, 23, 42, 0.18);
+      }
+      .preview-theme {
+        position: absolute;
+        right: 12px;
+        bottom: 12px;
+        padding: 0.4rem 0.7rem;
+        border-radius: 999px;
+        border: 1px solid #d1d5db;
+        background: rgba(255, 255, 255, 0.8);
+        font-weight: 700;
+        backdrop-filter: blur(4px);
+        box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+      }
       .text-mono {
         font-family: "SFMono-Regular", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
         font-size: 0.95rem;
@@ -671,13 +735,28 @@
                       </div>
                       <span class="pill neutral" id="dataset-detail-filetype" style="margin:0;">-</span>
                     </div>
-                    <div class="dataset-detail-body">
-                      <div class="detail-note" id="dataset-detail-learning">画像やPDFなどの学習ポイントがここに表示されます。</div>
-                      <div>
-                        <div class="muted" style="margin-bottom:0.25rem;">ファイル/画像の内訳</div>
-                        <ul class="dataset-file-list" id="dataset-detail-files"></ul>
+                  <div class="dataset-detail-body">
+                    <div class="detail-note" id="dataset-detail-learning">画像やPDFなどの学習ポイントがここに表示されます。</div>
+                    <div class="image-preview" id="image-preview" style="display:none;">
+                      <div class="preview-toolbar">
+                        <div class="preview-controls">
+                          <label for="preview-zoom">拡大率</label>
+                          <input id="preview-zoom" type="range" min="50" max="200" value="100" />
+                          <label for="preview-background">背景色</label>
+                          <input id="preview-background" type="color" value="#0b1224" />
+                        </div>
+                        <div class="preview-meta" id="preview-meta">プレビューを読み込み中…</div>
+                      </div>
+                      <div class="image-preview-frame" id="image-preview-frame">
+                        <img id="preview-image" alt="画像プレビュー" />
+                        <div class="preview-theme" id="preview-theme">全体表示テーマ</div>
                       </div>
                     </div>
+                    <div>
+                      <div class="muted" style="margin-bottom:0.25rem;">ファイル/画像の内訳</div>
+                      <ul class="dataset-file-list" id="dataset-detail-files"></ul>
+                    </div>
+                  </div>
                   </div>
                 </div>
                 <div class="divider"></div>
@@ -774,11 +853,19 @@
         const datasetDetailLearning = document.getElementById("dataset-detail-learning");
         const datasetDetailFiles = document.getElementById("dataset-detail-files");
         const fallbackPreview = document.getElementById("fallback-preview");
+        const imagePreview = document.getElementById("image-preview");
+        const previewImage = document.getElementById("preview-image");
+        const previewZoomInput = document.getElementById("preview-zoom");
+        const previewBackgroundInput = document.getElementById("preview-background");
+        const previewMeta = document.getElementById("preview-meta");
+        const previewFrame = document.getElementById("image-preview-frame");
+        const previewTheme = document.getElementById("preview-theme");
         const tabButtons = Array.from(document.querySelectorAll(".tablist button"));
         const tabPanels = Array.from(document.querySelectorAll(".tab-panel"));
         let selectedDatasetAppId = null;
         let selectedShareAppId = null;
         let selectedDatasetEntryId = null;
+        let currentPreviewLabel = "画像プレビュー";
 
         function activateTab(target) {
           const tabId = target || "create";
@@ -1246,6 +1333,88 @@
           return `${file?.name || "ファイル"} · 主要トピックを抽出`;
         }
 
+        function createPlaceholderPreview(label, accent = "#0ea5e9") {
+          const text = (label || "Preview").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+          const color = accent;
+          return `data:image/svg+xml;charset=utf-8,` +
+            encodeURIComponent(
+              `<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360' viewBox='0 0 640 360'>` +
+                `<defs><linearGradient id='grad' x1='0%' y1='0%' x2='100%' y2='100%'>` +
+                `<stop offset='0%' stop-color='${color}' stop-opacity='0.18'/>` +
+                `<stop offset='100%' stop-color='${color}' stop-opacity='0.08'/></linearGradient></defs>` +
+                `<rect width='640' height='360' rx='18' fill='url(#grad)'/>` +
+                `<text x='50%' y='52%' dominant-baseline='middle' text-anchor='middle' fill='#0f172a' font-family='Inter, system-ui' font-size='22' font-weight='700'>${text}</text>` +
+              `</svg>`
+            );
+        }
+
+        function getAccessibleTextColor(hex) {
+          if (!hex) return "#0f172a";
+          const normalized = hex.replace("#", "");
+          const expanded = normalized.length === 3
+            ? normalized.split("").map((c) => c + c).join("")
+            : normalized.padEnd(6, "f");
+          const bigint = parseInt(expanded.slice(0, 6), 16);
+          const r = (bigint >> 16) & 255;
+          const g = (bigint >> 8) & 255;
+          const b = bigint & 255;
+          const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+          return luminance > 0.6 ? "#0f172a" : "#f8fafc";
+        }
+
+        function readImagePreview(file) {
+          return new Promise((resolve) => {
+            if (!file || !(file.type || "").startsWith("image/")) return resolve(null);
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(file);
+          });
+        }
+
+        function applyPreviewBackground(color) {
+          if (!previewFrame || !previewMeta || !previewTheme) return;
+          previewFrame.style.background = color;
+          const textColor = getAccessibleTextColor(color);
+          previewMeta.style.color = textColor;
+          previewTheme.style.color = textColor;
+          previewTheme.style.borderColor = `${textColor}55`;
+          previewTheme.style.background = textColor === "#f8fafc" ? "rgba(15, 23, 42, 0.08)" : "rgba(255,255,255,0.12)";
+        }
+
+        function applyPreviewZoom(value) {
+          if (!previewImage || !previewMeta) return;
+          const zoom = Number(value) || 100;
+          previewImage.style.transform = `scale(${zoom / 100})`;
+          previewMeta.textContent = `${currentPreviewLabel} · ${zoom}%`;
+        }
+
+        function renderImagePreview(entry, app) {
+          if (!imagePreview) return;
+          const theme = getTheme(app?.theme);
+          const files = Array.isArray(entry?.files) ? entry.files : [];
+          const imageFile = files.find((file) => (file.type || "").startsWith("image/"));
+          if (!entry || (entry.fileType !== "image" && !imageFile)) {
+            imagePreview.style.display = "none";
+            return;
+          }
+          imagePreview.style.display = "grid";
+          currentPreviewLabel = imageFile?.name || entry.title || "画像プレビュー";
+          const src = entry.previewDataUrl || imageFile?.previewDataUrl || createPlaceholderPreview(currentPreviewLabel, theme.accent);
+          if (previewImage) {
+            previewImage.src = src;
+            previewImage.alt = currentPreviewLabel;
+          }
+          if (previewTheme) {
+            previewTheme.textContent = `全体表示テーマ: ${theme.label}`;
+          }
+          const initialBackground = previewBackgroundInput?.value || theme.frame || "#0b1224";
+          if (previewBackgroundInput) previewBackgroundInput.value = initialBackground;
+          applyPreviewBackground(initialBackground);
+          const defaultZoom = previewZoomInput?.value || "100";
+          applyPreviewZoom(defaultZoom);
+        }
+
         function renderDatasetDetails(entry, dataset) {
           if (!datasetDetailTitle || !datasetDetailLearning || !datasetDetailFiles || !datasetDetailFileType) return;
           if (!entry) {
@@ -1253,6 +1422,7 @@
             datasetDetailLearning.textContent = "画像やPDFなどの学習ポイントがここに表示されます。";
             datasetDetailFiles.innerHTML = "";
             datasetDetailFileType.textContent = "-";
+            if (imagePreview) imagePreview.style.display = "none";
             return;
           }
           const folder = dataset?.folders?.find((item) => item.id === entry.folderId);
@@ -1260,6 +1430,8 @@
           datasetDetailTitle.textContent = `${entry.title}（${folder ? folder.name : "デフォルト"}）`;
           datasetDetailFileType.textContent = describeFileType(entry.fileType);
           datasetDetailLearning.textContent = generateLearningNotes(entry);
+          const parentApp = getAppById(selectedDatasetAppId);
+          renderImagePreview(entry, parentApp);
           datasetDetailFiles.innerHTML = "";
           if (!files.length) {
             const li = document.createElement("li");
@@ -1536,6 +1708,14 @@
           renderDatasetSection();
         });
 
+        previewZoomInput?.addEventListener("input", () => {
+          applyPreviewZoom(previewZoomInput.value);
+        });
+
+        previewBackgroundInput?.addEventListener("input", () => {
+          applyPreviewBackground(previewBackgroundInput.value);
+        });
+
         folderForm?.addEventListener("submit", (event) => {
           event.preventDefault();
           if (!selectedDatasetAppId) return;
@@ -1559,14 +1739,15 @@
           renderDatasetSection();
         });
 
-        datasetForm?.addEventListener("submit", (event) => {
+        datasetForm?.addEventListener("submit", async (event) => {
           event.preventDefault();
           if (!selectedDatasetAppId) return;
           const title = datasetTitleInput.value.trim();
           const source = datasetSourceInput.value.trim();
           const folderId = datasetFolderSelect.value || "root";
           const fileType = datasetFileTypeSelect?.value || "other";
-          const attachments = Array.from(datasetFilesInput?.files || []).map((file) => ({
+          const rawFiles = Array.from(datasetFilesInput?.files || []);
+          const attachments = rawFiles.map((file) => ({
             name: file.name,
             size: file.size,
             type: file.type || fileType
@@ -1575,6 +1756,8 @@
             showMessage(datasetMessage, "データ名を入力してください。", "error");
             return;
           }
+          const previewSource = rawFiles.find((file) => (file.type || fileType).startsWith("image/"));
+          const previewDataUrl = await readImagePreview(previewSource);
           const store = loadDatasetStore();
           const dataset = ensureDataset(selectedDatasetAppId);
           const newEntryId = `entry-${Date.now()}`;
@@ -1585,6 +1768,7 @@
             folderId,
             fileType,
             files: attachments,
+            previewDataUrl,
             learningNotes: datasetLearningInput?.value.trim() || "",
             addedAt: new Date().toISOString()
           });
