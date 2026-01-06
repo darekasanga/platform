@@ -169,6 +169,7 @@
 
             <button type="submit">Continue</button>
           </form>
+          <div class="message" id="login-message" role="status" aria-live="polite"></div>
           <a class="back-link" href="./index.html">← Back to home</a>
         </div>
 
@@ -204,7 +205,9 @@
           { name: "Helena Rossi", email: "helena.rossi@acme.io", role: "Analyst", status: "Active", lastLogin: "Aug 12", initialPassword: "administration" }
         ];
 
+        const loginForm = document.getElementById("login-form");
         const signupForm = document.getElementById("signup-form");
+        const loginMessage = document.getElementById("login-message");
         const messageEl = document.getElementById("signup-message");
 
         function loadAccounts() {
@@ -223,13 +226,26 @@
 
         function getAccounts() {
           const existing = loadAccounts();
-          if (existing.length) return existing;
-          saveAccounts(SEED_ACCOUNTS);
-          return [...SEED_ACCOUNTS];
+          if (existing.length) {
+            const normalized = existing.map((account) => ({
+              ...account,
+              password: account.password || account.initialPassword || "administration"
+            }));
+            saveAccounts(normalized);
+            return normalized;
+          }
+          const seeded = SEED_ACCOUNTS.map((account) => ({ ...account, password: account.initialPassword || "administration" }));
+          saveAccounts(seeded);
+          return seeded;
         }
 
-        function addAccount({ name, email, role, status, lastLogin }) {
+        function addAccount({ name, email, role, status, lastLogin, password }) {
           const accounts = getAccounts();
+          const exists = accounts.some((acct) => acct.email.toLowerCase() === email.toLowerCase());
+          if (exists) {
+            showMessage("このメールは既に登録されています。", "error");
+            return false;
+          }
           accounts.push({
             id: crypto.randomUUID ? crypto.randomUUID() : `acct-${Date.now()}`,
             name,
@@ -237,9 +253,16 @@
             role,
             status,
             lastLogin,
-            initialPassword: "administration"
+            initialPassword: password || "administration",
+            password: password || "administration"
           });
           saveAccounts(accounts);
+          return true;
+        }
+
+        function findAccount(email) {
+          const accounts = getAccounts();
+          return accounts.find((account) => account.email.toLowerCase() === email.toLowerCase());
         }
 
         function showMessage(text, type) {
@@ -247,6 +270,42 @@
           messageEl.textContent = text;
           messageEl.className = `message ${type}`;
         }
+
+        function showLoginMessage(text, type) {
+          if (!loginMessage) return;
+          loginMessage.textContent = text;
+          loginMessage.className = `message ${type}`;
+        }
+
+        loginForm?.addEventListener("submit", (event) => {
+          event.preventDefault();
+          const email = document.getElementById("email").value.trim();
+          const password = document.getElementById("password").value;
+          const remember = document.querySelector('input[name="remember"]').checked;
+
+          const account = findAccount(email);
+          if (!account) {
+            showLoginMessage("アカウントが見つかりません。メールを確認してください。", "error");
+            return;
+          }
+
+          const expected = account.password || account.initialPassword || "administration";
+          if (password !== expected) {
+            showLoginMessage("パスワードが正しくありません。", "error");
+            return;
+          }
+
+          const session = { email: account.email, name: account.name, role: account.role, lastLogin: new Date().toISOString() };
+          sessionStorage.setItem("platformSession", JSON.stringify(session));
+          if (remember) {
+            localStorage.setItem("platformRemember", JSON.stringify(session));
+          }
+
+          showLoginMessage("ログインに成功しました。管理ページへ移動します。", "success");
+          setTimeout(() => {
+            window.location.href = "./management.html";
+          }, 600);
+        });
 
         signupForm?.addEventListener("submit", (event) => {
           event.preventDefault();
@@ -265,16 +324,19 @@
             return;
           }
 
-          addAccount({
+          const added = addAccount({
             name,
             email,
             role: "Workspace Manager",
             status: "Pending first login",
-            lastLogin: "Not yet"
+            lastLogin: "Not yet",
+            password
           });
 
-          showMessage("アカウントを作成しました。管理ページで確認できます。", "success");
-          signupForm.reset();
+          if (added) {
+            showMessage("アカウントを作成しました。管理ページで確認できます。", "success");
+            signupForm.reset();
+          }
         });
       })();
     </script>
