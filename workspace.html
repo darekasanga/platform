@@ -453,6 +453,80 @@
         font-family: "SFMono-Regular", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
         font-size: 0.95rem;
       }
+      .selected-bot-card {
+        border: 1px solid #dbeafe;
+        background: linear-gradient(180deg, #f8fbff, #eef2ff);
+        border-radius: 14px;
+        padding: 1rem 1.25rem;
+        box-shadow: 0 14px 30px rgba(59, 130, 246, 0.12);
+        display: grid;
+        gap: 0.75rem;
+      }
+      .selected-bot-layout {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 0.85rem;
+        align-items: start;
+      }
+      .selected-bot-name {
+        margin: 0.2rem 0 0;
+        font-size: 1.3rem;
+      }
+      .selected-bot-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        align-items: center;
+        margin-top: 0.45rem;
+      }
+      .url-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0.5rem;
+        align-items: center;
+        border: 1px dashed #bfdbfe;
+        background: #f8fafc;
+        border-radius: 10px;
+        padding: 0.55rem 0.65rem;
+      }
+      .url-actions {
+        display: flex;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+      .link-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.6rem;
+        border-radius: 999px;
+        background: #eef2ff;
+        color: #1e3a8a;
+        text-decoration: none;
+        font-weight: 700;
+      }
+      .theme-update {
+        display: grid;
+        gap: 0.45rem;
+      }
+      .theme-update-controls {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .learning-summary {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        gap: 0.6rem;
+      }
+      .learning-summary .list-item {
+        background: linear-gradient(180deg, #ffffff, #f3f4f6);
+        border-color: #e5e7eb;
+      }
     </style>
   </head>
   <body>
@@ -602,6 +676,55 @@
               <div class="badge">Share</div>
               <h3>ボットの共有と埋め込み</h3>
               <p class="subtle">ホームページ右下のポップアップ、別ウィンドウ表示、TRAINページリンクをワンクリックで発行できます。</p>
+              <div id="selected-bot-card" class="selected-bot-card" aria-live="polite">
+                <div class="selected-bot-layout">
+                  <div>
+                    <div class="selected-bot-tags">
+                      <span class="pill neutral" style="margin:0;">選択中のチャットボット</span>
+                      <span class="pill" id="selected-bot-theme-label" style="margin:0;"></span>
+                    </div>
+                    <h4 class="selected-bot-name" id="selected-bot-name">-</h4>
+                    <p class="subtle" id="selected-bot-purpose" style="margin:0.15rem 0 0.45rem;">ボットを選択すると概要が表示されます。</p>
+                    <div class="selected-bot-tags">
+                      <span class="pill" id="selected-bot-model" style="margin:0;">-</span>
+                      <span class="theme-preview" id="selected-bot-theme-preview">
+                        <span class="theme-dot" style="background:#0ea5e9;"></span>
+                        <span id="selected-bot-theme-text">Theme</span>
+                      </span>
+                    </div>
+                  </div>
+                  <div class="stack">
+                    <div class="url-row">
+                      <div>
+                        <strong>プレビューURL</strong>
+                        <div class="muted text-mono" id="selected-preview-url" style="margin-top:0.25rem;">-</div>
+                      </div>
+                      <div class="url-actions">
+                        <button type="button" class="secondary" id="open-preview-url">開く</button>
+                        <button type="button" class="secondary" id="copy-preview-url">コピー</button>
+                      </div>
+                    </div>
+                    <div class="url-row">
+                      <div>
+                        <strong>TRAINページURL</strong>
+                        <div class="muted text-mono" id="selected-train-url" style="margin-top:0.25rem;">-</div>
+                      </div>
+                      <div class="url-actions">
+                        <button type="button" class="secondary" id="open-train-url">開く</button>
+                        <button type="button" class="secondary" id="copy-train-url">コピー</button>
+                      </div>
+                    </div>
+                    <div class="theme-update">
+                      <label for="selected-theme">テーマを後から変更</label>
+                      <div class="theme-update-controls">
+                        <select id="selected-theme" name="selected-theme"></select>
+                        <button type="button" id="save-selected-theme">テーマを保存</button>
+                      </div>
+                      <p class="subtle" style="margin:0;">埋め込みコードとプレビューに即時反映されます。</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div class="grid">
                 <div class="stack">
                   <div class="field">
@@ -759,6 +882,11 @@
                   </div>
                   </div>
                 </div>
+                <div class="stack">
+                  <strong>ファイルからの学習内容一覧</strong>
+                  <p class="subtle" style="margin:0 0 0.5rem;">読み込み可能なファイルに紐づく学習ノートをまとめて表示します。</p>
+                  <ul id="learning-summary" class="learning-summary"></ul>
+                </div>
                 <div class="divider"></div>
                 <div class="stack">
                   <strong>TRAINページリンク</strong>
@@ -853,13 +981,22 @@
         const datasetDetailLearning = document.getElementById("dataset-detail-learning");
         const datasetDetailFiles = document.getElementById("dataset-detail-files");
         const fallbackPreview = document.getElementById("fallback-preview");
-        const imagePreview = document.getElementById("image-preview");
-        const previewImage = document.getElementById("preview-image");
-        const previewZoomInput = document.getElementById("preview-zoom");
-        const previewBackgroundInput = document.getElementById("preview-background");
-        const previewMeta = document.getElementById("preview-meta");
-        const previewFrame = document.getElementById("image-preview-frame");
-        const previewTheme = document.getElementById("preview-theme");
+        const selectedBotCard = document.getElementById("selected-bot-card");
+        const selectedBotName = document.getElementById("selected-bot-name");
+        const selectedBotPurpose = document.getElementById("selected-bot-purpose");
+        const selectedBotModel = document.getElementById("selected-bot-model");
+        const selectedBotThemeLabel = document.getElementById("selected-bot-theme-label");
+        const selectedBotThemePreview = document.getElementById("selected-bot-theme-preview");
+        const selectedBotThemeText = document.getElementById("selected-bot-theme-text");
+        const selectedPreviewUrl = document.getElementById("selected-preview-url");
+        const selectedTrainUrl = document.getElementById("selected-train-url");
+        const copyPreviewUrlButton = document.getElementById("copy-preview-url");
+        const openPreviewUrlButton = document.getElementById("open-preview-url");
+        const copyTrainUrlButton = document.getElementById("copy-train-url");
+        const openTrainUrlButton = document.getElementById("open-train-url");
+        const selectedThemeSelect = document.getElementById("selected-theme");
+        const saveSelectedThemeButton = document.getElementById("save-selected-theme");
+        const learningSummaryList = document.getElementById("learning-summary");
         const tabButtons = Array.from(document.querySelectorAll(".tablist button"));
         const tabPanels = Array.from(document.querySelectorAll(".tab-panel"));
         let selectedDatasetAppId = null;
@@ -886,6 +1023,21 @@
           return THEME_LIBRARY[key] || THEME_LIBRARY.ocean;
         }
 
+        function populateThemeSelect(selectElement, selectedValue) {
+          if (!selectElement) return;
+          selectElement.innerHTML = "";
+          Object.entries(THEME_LIBRARY).forEach(([key, meta]) => {
+            const option = document.createElement("option");
+            option.value = key;
+            option.textContent = meta.label;
+            if (selectedValue && selectedValue === key) option.selected = true;
+            selectElement.appendChild(option);
+          });
+          if (selectedValue && THEME_LIBRARY[selectedValue]) {
+            selectElement.value = selectedValue;
+          }
+        }
+
         function escapeForEmbed(value) {
           return (value || "")
             .replace(/\\/g, "\\\\")
@@ -895,14 +1047,12 @@
         }
 
         function ensureThemeOptions() {
-          if (!appThemeSelect) return;
-          appThemeSelect.innerHTML = "";
-          Object.entries(THEME_LIBRARY).forEach(([key, meta]) => {
-            const option = document.createElement("option");
-            option.value = key;
-            option.textContent = meta.label;
-            appThemeSelect.appendChild(option);
-          });
+          if (appThemeSelect) {
+            populateThemeSelect(appThemeSelect, appThemeSelect.value || "ocean");
+          }
+          if (selectedThemeSelect && !selectedThemeSelect.options.length) {
+            populateThemeSelect(selectedThemeSelect, selectedThemeSelect.value || "ocean");
+          }
         }
 
         function getSession() {
@@ -1107,6 +1257,7 @@
             if (embedCodeOutput) embedCodeOutput.value = "";
             if (trainEmbedShareOutput) trainEmbedShareOutput.value = "";
             if (fallbackPreview) fallbackPreview.style.display = "none";
+            if (selectedBotCard) selectedBotCard.style.display = "none";
             return;
           }
 
@@ -1303,6 +1454,17 @@
           ].join("\n");
         }
 
+        function updateAppTheme(appId, themeKey) {
+          if (!THEME_LIBRARY[themeKey]) return null;
+          const apps = getApps();
+          const index = apps.findIndex((app) => app.id === appId);
+          if (index === -1) return null;
+          const updated = { ...apps[index], theme: themeKey };
+          apps[index] = updated;
+          saveList(APP_STORAGE_KEY, apps);
+          return updated;
+        }
+
         function describeFileType(type) {
           const map = {
             pdf: "PDF",
@@ -1453,6 +1615,45 @@
           }
         }
 
+        function renderLearningSummary(dataset) {
+          if (!learningSummaryList) return;
+          learningSummaryList.innerHTML = "";
+          if (!dataset || !dataset.entries || !dataset.entries.length) {
+            const item = document.createElement("li");
+            item.className = "list-item muted";
+            item.textContent = "まだ学習データがありません。ファイルを追加すると学習内容の一覧が表示されます。";
+            learningSummaryList.appendChild(item);
+            return;
+          }
+          const fileEntries = dataset.entries.filter((entry) => Array.isArray(entry.files) && entry.files.length);
+          if (!fileEntries.length) {
+            const item = document.createElement("li");
+            item.className = "list-item muted";
+            item.textContent = "ファイルを含むデータはまだありません。アップロードすると、読み込み可能な内容がここに表示されます。";
+            learningSummaryList.appendChild(item);
+            return;
+          }
+          fileEntries
+            .slice()
+            .sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt))
+            .forEach((entry) => {
+              const folder = dataset.folders.find((item) => item.id === entry.folderId);
+              const li = document.createElement("li");
+              li.className = "list-item";
+              li.innerHTML = `
+                <div style="display:flex; justify-content:space-between; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+                  <div>
+                    <strong>${entry.title}</strong>
+                    <div class="muted">${folder ? folder.name : "デフォルト"} · ${entry.files.length}件のファイルを読み込み済み</div>
+                    <div class="muted" style="margin-top:0.25rem;">${generateLearningNotes(entry)}</div>
+                  </div>
+                  <span class="pill neutral" style="margin:0;">${describeFileType(entry.fileType)}</span>
+                </div>
+              `;
+              learningSummaryList.appendChild(li);
+            });
+        }
+
         function renderShareSection() {
           const apps = getApps();
           if (!apps.length || !shareBotSelect) return;
@@ -1466,6 +1667,28 @@
           }
 
           const theme = getTheme(app?.theme);
+          populateThemeSelect(selectedThemeSelect, app?.theme || "ocean");
+
+          if (selectedBotCard) {
+            selectedBotCard.style.display = app ? "grid" : "none";
+          }
+          if (selectedBotName) selectedBotName.textContent = app?.name || "-";
+          if (selectedBotPurpose) selectedBotPurpose.textContent = app?.purpose || "用途メモがあるとプレビューに表示されます。";
+          if (selectedBotModel) selectedBotModel.textContent = app?.model || "GPT-4o mini";
+          if (selectedBotThemeLabel) selectedBotThemeLabel.textContent = `テーマ: ${theme.label}`;
+          if (selectedBotThemeText) selectedBotThemeText.textContent = theme.label;
+          if (selectedBotThemePreview) {
+            const dot = selectedBotThemePreview.querySelector(".theme-dot");
+            if (dot) dot.style.background = theme.accent;
+          }
+          if (selectedPreviewUrl) {
+            selectedPreviewUrl.textContent = app?.url || "-";
+            selectedPreviewUrl.dataset.href = app?.url || "";
+          }
+          if (selectedTrainUrl) {
+            selectedTrainUrl.textContent = app?.trainUrl || "-";
+            selectedTrainUrl.dataset.href = app?.trainUrl || "";
+          }
 
           if (embedCodeOutput && app) {
             embedCodeOutput.value = buildEmbedCode(app, size);
@@ -1515,6 +1738,14 @@
           target.style.display = "block";
           target.textContent = text;
           target.className = `message ${type}`;
+        }
+
+        function copyToClipboard(value, target, successText, errorText) {
+          if (!value) return;
+          navigator.clipboard
+            ?.writeText(value)
+            .then(() => showMessage(target, successText, "success"))
+            .catch(() => showMessage(target, errorText, "error"));
         }
 
         function renderFolders(dataset) {
@@ -1593,6 +1824,7 @@
             datasetFolderSelect.innerHTML = "";
             datasetEmpty.style.display = "block";
             renderDatasetDetails(null);
+            if (learningSummaryList) learningSummaryList.innerHTML = "";
             return;
           }
           const dataset = ensureDataset(selectedDatasetAppId);
@@ -1601,6 +1833,7 @@
           }
           renderFolders(dataset);
           renderDatasetTable(dataset);
+          renderLearningSummary(dataset);
           const selectedApp = getAppById(selectedDatasetAppId);
           if (trainEmbedDatasetOutput && selectedApp) {
             trainEmbedDatasetOutput.value = buildTrainEmbedCode(selectedApp);
@@ -1811,6 +2044,18 @@
           });
         });
 
+        copyPreviewUrlButton?.addEventListener("click", () => {
+          const app = getAppById(selectedShareAppId || shareBotSelect?.value);
+          if (!app?.url) return;
+          copyToClipboard(app.url, shareMessage, "プレビューURLをコピーしました。", "コピーに失敗しました。");
+        });
+
+        copyTrainUrlButton?.addEventListener("click", () => {
+          const app = getAppById(selectedShareAppId || shareBotSelect?.value);
+          if (!app?.trainUrl) return;
+          copyToClipboard(app.trainUrl, shareMessage, "TRAINページURLをコピーしました。", "コピーに失敗しました。");
+        });
+
         openBotWindowButton?.addEventListener("click", () => {
           const app = getAppById(selectedShareAppId || shareBotSelect?.value);
           if (!app) return;
@@ -1821,6 +2066,38 @@
           const app = getAppById(selectedShareAppId || shareBotSelect?.value);
           if (!app) return;
           window.open(app.trainUrl, "_blank", "width=1200,height=780");
+        });
+
+        openPreviewUrlButton?.addEventListener("click", () => {
+          const app = getAppById(selectedShareAppId || shareBotSelect?.value);
+          if (!app?.url) return;
+          window.open(app.url, "_blank", "width=520,height=780");
+        });
+
+        openTrainUrlButton?.addEventListener("click", () => {
+          const app = getAppById(selectedShareAppId || shareBotSelect?.value);
+          if (!app?.trainUrl) return;
+          window.open(app.trainUrl, "_blank", "width=1200,height=780");
+        });
+
+        saveSelectedThemeButton?.addEventListener("click", () => {
+          const app = getAppById(selectedShareAppId || shareBotSelect?.value);
+          const themeKey = selectedThemeSelect?.value || "ocean";
+          if (!app) {
+            showMessage(shareMessage, "先にボットを選択してください。", "error");
+            return;
+          }
+          if (!THEME_LIBRARY[themeKey]) {
+            showMessage(shareMessage, "テーマを選択してください。", "error");
+            return;
+          }
+          const updated = updateAppTheme(app.id, themeKey);
+          if (!updated) {
+            showMessage(shareMessage, "テーマの更新に失敗しました。", "error");
+            return;
+          }
+          showMessage(shareMessage, `テーマを ${getTheme(themeKey).label} に更新しました。`, "success");
+          renderApps();
         });
 
         copyTrainEmbedButton?.addEventListener("click", () => {
