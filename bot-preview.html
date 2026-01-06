@@ -177,6 +177,9 @@
         const pill = document.getElementById("bot-pill");
         const meta = document.getElementById("meta-text");
         const answer = document.getElementById("bot-answer");
+        const chatWindow = document.querySelector(".chat-window");
+        const userInput = document.querySelector(".input-row input");
+        const sendButton = document.querySelector(".input-row button");
 
         if (title) title.textContent = `${friendlyName} プレビュー`;
         if (description) description.textContent = `${friendlyName} の応答イメージを表示しています。外部ログインなしで誰でも確認できます。`;
@@ -185,6 +188,36 @@
         if (answer) {
           answer.textContent = `${friendlyName} が回答例を生成しました。実際のデータは取得していませんが、共有用プレビューとしてサイトに埋め込めます。`;
         }
+
+        function appendBubble(text, type) {
+          if (!chatWindow) return;
+          const bubble = document.createElement("div");
+          bubble.className = `bubble ${type}`;
+          bubble.textContent = text;
+          chatWindow.appendChild(bubble);
+          chatWindow.scrollTo({
+            top: chatWindow.scrollHeight,
+            behavior: "smooth"
+          });
+        }
+
+        function handleSend() {
+          if (!userInput || !userInput.value.trim()) return;
+          const question = userInput.value.trim();
+          appendBubble(question, "from-user");
+          userInput.value = "";
+
+          const response = `${friendlyName} がプレビューとして回答しました: 「${question}」に基づき要約を作成しました。（デモ応答）`;
+          setTimeout(() => appendBubble(response, "from-bot"), 240);
+        }
+
+        sendButton?.addEventListener("click", handleSend);
+        userInput?.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            handleSend();
+          }
+        });
       })();
     </script>
   </body>
