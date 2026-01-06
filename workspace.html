@@ -313,6 +313,82 @@
       .tab-panel.active {
         display: block;
       }
+      .prominent-select {
+        border: 2px solid rgba(0, 85, 255, 0.35);
+        box-shadow: 0 10px 22px rgba(0, 85, 255, 0.1);
+        background: linear-gradient(180deg, #ffffff, #f7f9ff);
+        font-weight: 700;
+      }
+      .app-select-callout {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.45rem 0.75rem;
+        border-radius: 999px;
+        background: rgba(0, 85, 255, 0.08);
+        color: var(--accent);
+        font-weight: 700;
+        border: 1px solid rgba(0, 85, 255, 0.2);
+      }
+      .theme-preview {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.4rem 0.65rem;
+        border-radius: 10px;
+        border: 1px solid #e5e7eb;
+        background: #f8fafc;
+      }
+      .theme-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 1px solid #d1d5db;
+        flex-shrink: 0;
+      }
+      .dataset-detail-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 1rem;
+        background: linear-gradient(180deg, #ffffff, #f8fafc);
+        display: grid;
+        gap: 0.75rem;
+      }
+      .dataset-detail-body {
+        display: grid;
+        gap: 0.65rem;
+      }
+      .dataset-file-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        gap: 0.35rem;
+      }
+      .ghost-button {
+        background: transparent;
+        border: 1px dashed #d1d5db;
+        color: var(--muted);
+        border-radius: 10px;
+        padding: 0.35rem 0.65rem;
+        cursor: pointer;
+        transition: border-color 120ms ease-in-out, color 120ms ease-in-out;
+      }
+      .ghost-button:hover {
+        border-color: #ef4444;
+        color: #b91c1c;
+      }
+      .detail-note {
+        background: #ecfeff;
+        color: #0b5ed7;
+        padding: 0.55rem 0.65rem;
+        border-radius: 10px;
+        border: 1px solid rgba(14, 165, 233, 0.25);
+      }
+      .text-mono {
+        font-family: "SFMono-Regular", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 0.95rem;
+      }
     </style>
   </head>
   <body>
@@ -389,8 +465,29 @@
                   </select>
                 </div>
                 <div class="field">
+                  <label for="app-theme">チャットウィンドウのテーマ (全10種)</label>
+                  <select id="app-theme" name="app-theme" class="prominent-select">
+                    <option value="ocean">Ocean breeze</option>
+                    <option value="forest">Forest walk</option>
+                    <option value="midnight">Midnight neon</option>
+                    <option value="sunrise">Sunrise glow</option>
+                    <option value="lavender">Lavender field</option>
+                    <option value="solar">Solar flare</option>
+                    <option value="minimal">Minimal white</option>
+                    <option value="coral">Coral sand</option>
+                    <option value="slate">Slate focus</option>
+                    <option value="emerald">Emerald tone</option>
+                  </select>
+                  <p class="subtle" style="margin: 0;">テーマは埋め込みコードにも反映され、チャットウィンドウの配色やアクセントが切り替わります。</p>
+                </div>
+                <div class="field">
                   <label for="app-sources">データソース</label>
                   <input id="app-sources" name="app-sources" type="text" placeholder="Notion、FAQ、Postgres" />
+                </div>
+                <div class="field">
+                  <label for="fallback-message">登録外の質問への回答</label>
+                  <textarea id="fallback-message" name="fallback-message" placeholder="登録されていない質問やデータは安全な定型文で回答します。" aria-describedby="fallback-note"></textarea>
+                  <p id="fallback-note" class="subtle" style="margin: 0;">例: 「申し訳ありませんが、登録情報にない内容なので一般的なご案内のみお伝えします。」</p>
                 </div>
                 <div class="actions">
                   <button type="submit">Create</button>
@@ -412,8 +509,8 @@
               <p class="subtle">作成したアプリを選んで即時にテスト実行。ラン結果は履歴に残ります。</p>
               <div class="stack">
                 <div class="field">
-                  <label for="app-select">実行するアプリ</label>
-                  <select id="app-select" name="app-select"></select>
+                  <label for="app-select">実行するアプリ <span class="app-select-callout">ここでチャットボットを選択</span></label>
+                  <select id="app-select" name="app-select" class="prominent-select"></select>
                 </div>
                 <div class="field">
                   <label for="deploy-target">公開先</label>
@@ -444,8 +541,8 @@
               <div class="grid">
                 <div class="stack">
                   <div class="field">
-                    <label for="share-bot">共有するボット</label>
-                    <select id="share-bot" name="share-bot"></select>
+                    <label for="share-bot">共有するボット <span class="app-select-callout">埋め込み対象を選択</span></label>
+                    <select id="share-bot" name="share-bot" class="prominent-select"></select>
                   </div>
                   <div class="field">
                     <label>ポップアップサイズ</label>
@@ -462,6 +559,9 @@
                     <button type="button" class="secondary" id="open-train-window">TRAINページを開く</button>
                   </div>
                   <p class="muted" id="bot-url-display" style="margin: 0.25rem 0 0.65rem;"></p>
+                  <div id="fallback-preview" class="message" style="display:none; background: rgba(59,130,246,0.08); color: #1d4ed8; border-color: rgba(59,130,246,0.32);">
+                    登録外の質問には「申し訳ありませんが、登録情報にない内容なので一般的なご案内のみお伝えします。」と案内します。
+                  </div>
                   <label for="embed-code" style="font-weight: 700; color: var(--text);">HTMLに貼り付けるコード</label>
                   <textarea id="embed-code" class="code-area" readonly aria-label="ボット埋め込みコード"></textarea>
                   <div class="divider"></div>
@@ -483,8 +583,8 @@
               <p class="subtle">作成済みボットごとに学習データをフォルダ管理で保存します。URLと紐づけて整理できます。</p>
               <div class="stack">
                 <div class="field">
-                  <label for="dataset-bot">ボットを選択</label>
-                  <select id="dataset-bot" name="dataset-bot"></select>
+                  <label for="dataset-bot">ボットを選択 <span class="app-select-callout">学習先チャットボットを指定</span></label>
+                  <select id="dataset-bot" name="dataset-bot" class="prominent-select"></select>
                 </div>
                 <div class="grid">
                   <div class="stack">
@@ -509,6 +609,11 @@
                       <div class="field">
                         <label for="dataset-source">データソース / メモ</label>
                         <textarea id="dataset-source" name="dataset-source" placeholder="Notion: API handbook、S3: api-v2.zip"></textarea>
+                      </div>
+                      <div class="field">
+                        <label for="dataset-learning">学習内容の要約・ポイント</label>
+                        <textarea id="dataset-learning" name="dataset-learning" placeholder="画像から抽出したテキスト、ファイルから得た箇条書きなどを記載"></textarea>
+                        <p class="subtle" style="margin:0;">画像・PDF・CSVなどファイル別に「何を学習したか」を残すと、後で詳細を確認できます。</p>
                       </div>
                       <div class="field">
                         <label for="dataset-filetype">ファイルタイプ</label>
@@ -552,11 +657,28 @@
                         <th>フォルダ</th>
                         <th>メモ</th>
                         <th>登録日時</th>
+                        <th>詳細</th>
                       </tr>
                     </thead>
                     <tbody id="dataset-table-body"></tbody>
                   </table>
                   <div id="dataset-empty" class="dataset-empty" style="display: none;">まだデータがありません。フォルダを選んで登録してください。</div>
+                  <div class="dataset-detail-card" id="dataset-detail-card" aria-live="polite">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+                      <div>
+                        <div class="muted" style="margin-bottom:0.15rem;">学習内容の詳細</div>
+                        <strong id="dataset-detail-title">まだデータが選択されていません</strong>
+                      </div>
+                      <span class="pill neutral" id="dataset-detail-filetype" style="margin:0;">-</span>
+                    </div>
+                    <div class="dataset-detail-body">
+                      <div class="detail-note" id="dataset-detail-learning">画像やPDFなどの学習ポイントがここに表示されます。</div>
+                      <div>
+                        <div class="muted" style="margin-bottom:0.25rem;">ファイル/画像の内訳</div>
+                        <ul class="dataset-file-list" id="dataset-detail-files"></ul>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <div class="divider"></div>
                 <div class="stack">
@@ -586,6 +708,20 @@
         const PREVIEW_ORIGIN = window.location.origin;
         const BOT_PREVIEW_PATH = "/bot-preview.html";
         const TRAIN_PREVIEW_PATH = "/train-preview.html";
+        const DEFAULT_FALLBACK_MESSAGE = "申し訳ありませんが、登録されていない内容なので一般的なご案内のみお伝えします。";
+
+        const THEME_LIBRARY = {
+          ocean: { label: "Ocean breeze", accent: "#0ea5e9", frame: "#0b1224", text: "#0f172a", buttonText: "#ffffff" },
+          forest: { label: "Forest walk", accent: "#16a34a", frame: "#064e3b", text: "#062b1b", buttonText: "#ffffff" },
+          midnight: { label: "Midnight neon", accent: "#6366f1", frame: "#0b1224", text: "#e2e8f0", buttonText: "#ffffff" },
+          sunrise: { label: "Sunrise glow", accent: "#f97316", frame: "#2f0a00", text: "#0f172a", buttonText: "#0f172a" },
+          lavender: { label: "Lavender field", accent: "#8b5cf6", frame: "#2e1065", text: "#1e1b4b", buttonText: "#ffffff" },
+          solar: { label: "Solar flare", accent: "#f59e0b", frame: "#1f2937", text: "#0f172a", buttonText: "#0f172a" },
+          minimal: { label: "Minimal white", accent: "#111827", frame: "#f8fafc", text: "#0f172a", buttonText: "#ffffff" },
+          coral: { label: "Coral sand", accent: "#fb7185", frame: "#3f0e1b", text: "#0f172a", buttonText: "#ffffff" },
+          slate: { label: "Slate focus", accent: "#334155", frame: "#0f172a", text: "#0f172a", buttonText: "#ffffff" },
+          emerald: { label: "Emerald tone", accent: "#10b981", frame: "#064e3b", text: "#0f172a", buttonText: "#0f172a" }
+        };
 
         const welcomeEl = document.getElementById("welcome");
         const nameEl = document.getElementById("user-name");
@@ -599,6 +735,8 @@
         const createMessage = document.getElementById("create-message");
         const appList = document.getElementById("app-list");
         const appSelect = document.getElementById("app-select");
+        const appThemeSelect = document.getElementById("app-theme");
+        const fallbackInput = document.getElementById("fallback-message");
         const runButton = document.getElementById("run-app");
         const deployButton = document.getElementById("deploy-app");
         const runMessage = document.getElementById("run-message");
@@ -624,16 +762,23 @@
         const datasetFileTypeSelect = document.getElementById("dataset-filetype");
         const datasetFilesInput = document.getElementById("dataset-files");
         const datasetFolderSelect = document.getElementById("dataset-folder");
+        const datasetLearningInput = document.getElementById("dataset-learning");
         const folderList = document.getElementById("folder-list");
         const datasetTableBody = document.getElementById("dataset-table-body");
         const datasetEmpty = document.getElementById("dataset-empty");
         const datasetMessage = document.getElementById("dataset-message");
         const copyTrainEmbedButton = document.getElementById("copy-train-embed");
         const trainEmbedDatasetOutput = document.getElementById("train-embed-code");
+        const datasetDetailTitle = document.getElementById("dataset-detail-title");
+        const datasetDetailFileType = document.getElementById("dataset-detail-filetype");
+        const datasetDetailLearning = document.getElementById("dataset-detail-learning");
+        const datasetDetailFiles = document.getElementById("dataset-detail-files");
+        const fallbackPreview = document.getElementById("fallback-preview");
         const tabButtons = Array.from(document.querySelectorAll(".tablist button"));
         const tabPanels = Array.from(document.querySelectorAll(".tab-panel"));
         let selectedDatasetAppId = null;
         let selectedShareAppId = null;
+        let selectedDatasetEntryId = null;
 
         function activateTab(target) {
           const tabId = target || "create";
@@ -647,6 +792,29 @@
             const isActive = panel.dataset.tab === tabId;
             panel.classList.toggle("active", isActive);
             panel.hidden = !isActive;
+          });
+        }
+
+        function getTheme(key) {
+          return THEME_LIBRARY[key] || THEME_LIBRARY.ocean;
+        }
+
+        function escapeForEmbed(value) {
+          return (value || "")
+            .replace(/\\/g, "\\\\")
+            .replace(/`/g, "\\`")
+            .replace(/'/g, "\\'")
+            .replace(/\r?\n/g, " ");
+        }
+
+        function ensureThemeOptions() {
+          if (!appThemeSelect) return;
+          appThemeSelect.innerHTML = "";
+          Object.entries(THEME_LIBRARY).forEach(([key, meta]) => {
+            const option = document.createElement("option");
+            option.value = key;
+            option.textContent = meta.label;
+            appThemeSelect.appendChild(option);
           });
         }
 
@@ -735,6 +903,8 @@
               purpose: "FAQと注文履歴を用いて、顧客からの質問に24時間回答するチャットを提供",
               model: "GPT-4o mini",
               sources: "Notion FAQ, Order DB",
+              theme: "ocean",
+              fallbackMessage: DEFAULT_FALLBACK_MESSAGE,
               url: `${PREVIEW_ORIGIN}${BOT_PREVIEW_PATH}?bot=customer-care-copilot`,
               createdAt: new Date().toISOString()
             }
@@ -743,6 +913,14 @@
           let mutated = false;
           const enhanced = apps.map((app) => {
             const enriched = { ...app };
+            if (!enriched.theme || !THEME_LIBRARY[enriched.theme]) {
+              enriched.theme = "ocean";
+              mutated = true;
+            }
+            if (!enriched.fallbackMessage) {
+              enriched.fallbackMessage = DEFAULT_FALLBACK_MESSAGE;
+              mutated = true;
+            }
             if (!enriched.url || enriched.url.includes("workspace.run")) {
               enriched.url = createAppUrl(enriched.name);
               mutated = true;
@@ -774,7 +952,38 @@
             };
             saveDatasetStore(store);
           }
-          return store[appId];
+          const dataset = store[appId];
+          if (!dataset.seeded && appId === "app-support" && (!dataset.entries || !dataset.entries.length)) {
+            dataset.entries.push(
+              {
+                id: "entry-faq",
+                title: "FAQメインデータ",
+                source: "Notion FAQ · 2024Q4更新版",
+                folderId: "root",
+                fileType: "pdf",
+                files: [{ name: "faq-master.pdf", size: 482000, type: "application/pdf" }],
+                learningNotes: "よくある質問と回答例を段落ごとに分割し、重要語句を抽出してベクトル化。登録外の質問には一般的なサポート手順を案内するように設定。",
+                addedAt: new Date().toISOString()
+              },
+              {
+                id: "entry-hero",
+                title: "製品画像からの学習",
+                source: "ブランドイメージ / ヒーロー画像",
+                folderId: "root",
+                fileType: "image",
+                files: [
+                  { name: "hero-shot.png", size: 192000, type: "image/png" },
+                  { name: "packaging.jpg", size: 142000, type: "image/jpeg" }
+                ],
+                learningNotes: "画像に含まれるキャッチコピー、カラーパレット、ロゴ位置を抽出し、回答にブランドトーンを反映。図や文字がない部分は説明文を生成して補完。",
+                addedAt: new Date().toISOString()
+              }
+            );
+            dataset.seeded = true;
+            store[appId] = dataset;
+            saveDatasetStore(store);
+          }
+          return dataset;
         }
 
         function createSlug(name) {
@@ -801,17 +1010,35 @@
           appList.innerHTML = "";
           appSelect.innerHTML = "";
           datasetBotSelect.innerHTML = "";
+          shareBotSelect.innerHTML = "";
+
+          if (!apps.length) {
+            appList.innerHTML = '<div class="dataset-empty">まだチャットボットがありません。Createタブから作成してください。</div>';
+            selectedDatasetAppId = null;
+            selectedShareAppId = null;
+            renderDatasetSection();
+            if (embedCodeOutput) embedCodeOutput.value = "";
+            if (trainEmbedShareOutput) trainEmbedShareOutput.value = "";
+            if (fallbackPreview) fallbackPreview.style.display = "none";
+            return;
+          }
 
           apps.forEach((app) => {
+            const theme = getTheme(app.theme);
             const item = document.createElement("div");
             item.className = "list-item";
             item.innerHTML = `
-              <strong>${app.name}</strong>
+              <div style="display:flex; justify-content:space-between; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                <strong>${app.name}</strong>
+                <button type="button" class="ghost-button" data-delete="${app.id}">削除</button>
+              </div>
               <div class="muted">${app.purpose || "AIチャットアプリ"}</div>
               <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.35rem;">
                 <span class="pill">${app.model || "GPT-4o mini"}</span>
                 <span class="pill" style="background:#ecfeff; color:#0b5ed7;">${app.sources || "データソース未指定"}</span>
+                <span class="theme-preview"><span class="theme-dot" style="background:${theme.accent};"></span>${theme.label}</span>
               </div>
+              <div class="muted text-mono" style="margin-top:0.35rem;">登録外: ${app.fallbackMessage || DEFAULT_FALLBACK_MESSAGE}</div>
               <div class="muted" style="margin-top:0.4rem;">URL: <a href="${app.url || "#"}" target="_blank" rel="noreferrer">${app.url || "割り当て中"}</a></div>
             `;
             appList.appendChild(item);
@@ -830,6 +1057,9 @@
             shareOption.value = app.id;
             shareOption.textContent = app.name;
             shareBotSelect.appendChild(shareOption);
+
+            const deleteButton = item.querySelector('button[data-delete]');
+            deleteButton?.addEventListener("click", () => handleDeleteApp(app.id));
           });
 
           if (!selectedDatasetAppId || !apps.find((app) => app.id === selectedDatasetAppId)) {
@@ -846,6 +1076,33 @@
           }
           renderDatasetSection();
           renderShareSection();
+        }
+
+        function handleDeleteApp(appId) {
+          const apps = getApps();
+          const target = apps.find((app) => app.id === appId);
+          if (!target) return;
+          const confirmed = window.confirm(`${target.name} を削除しますか？関連する学習データ・履歴も整理されます。`);
+          if (!confirmed) return;
+          const updatedApps = apps.filter((app) => app.id !== appId);
+          saveList(APP_STORAGE_KEY, updatedApps);
+          const store = loadDatasetStore();
+          if (store[appId]) {
+            delete store[appId];
+            saveDatasetStore(store);
+          }
+          const filteredRuns = getRuns().filter((run) => run.appId !== appId && run.appName !== target.name);
+          saveList(RUN_STORAGE_KEY, filteredRuns);
+          if (selectedDatasetAppId === appId) {
+            selectedDatasetAppId = updatedApps[0]?.id ?? null;
+            selectedDatasetEntryId = null;
+          }
+          if (selectedShareAppId === appId) {
+            selectedShareAppId = updatedApps[0]?.id ?? null;
+          }
+          showMessage(createMessage, `${target.name} を削除しました。`, "success");
+          renderApps();
+          renderRuns();
         }
 
         function renderRuns() {
@@ -885,11 +1142,15 @@
 
         function buildEmbedCode(app, size) {
           const { width, height } = getPopupSize(size);
+          const theme = getTheme(app.theme);
+          const safeReply = escapeForEmbed(app.fallbackMessage || DEFAULT_FALLBACK_MESSAGE);
           return [
             '<div id="workspace-bot-launcher"></div>',
             '<script>',
             "(function(){",
             "  var botUrl = '" + app.url + "';",
+            "  var theme = { accent: '" + theme.accent + "', frame: '" + theme.frame + "', text: '" + theme.text + "', buttonText: '" + theme.buttonText + "' };",
+            "  var safeReply = '" + safeReply + "';",
             "  var launcher = document.getElementById('workspace-bot-launcher');",
             "  if (!launcher) { launcher = document.createElement('div'); document.body.appendChild(launcher); }",
             "  launcher.style.position = 'fixed';",
@@ -899,29 +1160,39 @@
             "  launcher.style.display = 'grid';",
             "  launcher.style.gap = '8px';",
             "  var toggle = document.createElement('button');",
-            "  toggle.textContent = 'Chat with " + app.name + "';",
+            "  toggle.textContent = 'Chat with " + escapeForEmbed(app.name) + "';",
             "  toggle.style.padding = '12px 14px';",
             "  toggle.style.borderRadius = '999px';",
-            "  toggle.style.background = '#0055ff';",
-            "  toggle.style.color = '#fff';",
-            "  toggle.style.border = 'none';",
-            "  toggle.style.boxShadow = '0 12px 28px rgba(0, 85, 255, 0.25)';",
+            "  toggle.style.background = theme.accent;",
+            "  toggle.style.color = theme.buttonText;",
+            "  toggle.style.border = '1px solid rgba(0,0,0,0.05)';",
+            "  toggle.style.boxShadow = '0 12px 28px rgba(0, 0, 0, 0.2)';",
             "  toggle.style.cursor = 'pointer';",
             "  var frame = document.createElement('iframe');",
             "  frame.src = botUrl;",
-            "  frame.title = '" + app.name + " chat';",
+            "  frame.title = '" + escapeForEmbed(app.name) + " chat';",
             "  frame.style.width = '" + width + "px';",
             "  frame.style.height = '" + height + "px';",
-            "  frame.style.border = '1px solid #e5e7eb';",
+            "  frame.style.border = '1px solid rgba(0,0,0,0.08)';",
             "  frame.style.borderRadius = '12px';",
             "  frame.style.boxShadow = '0 15px 36px rgba(0,0,0,0.14)';",
+            "  frame.style.background = theme.frame;",
             "  frame.style.display = 'none';",
             "  toggle.addEventListener('click', function(){",
             "    var open = frame.style.display !== 'none';",
             "    frame.style.display = open ? 'none' : 'block';",
             "  });",
+            "  var fallback = document.createElement('div');",
+            "  fallback.textContent = '登録外の質問には: ' + safeReply;",
+            "  fallback.style.fontSize = '12px';",
+            "  fallback.style.color = theme.text;",
+            "  fallback.style.background = 'rgba(255,255,255,0.8)';",
+            "  fallback.style.border = '1px solid rgba(0,0,0,0.05)';",
+            "  fallback.style.padding = '6px 10px';",
+            "  fallback.style.borderRadius = '10px';",
             "  launcher.appendChild(frame);",
             "  launcher.appendChild(toggle);",
+            "  launcher.appendChild(fallback);",
             "})();",
             "<\/script>"
           ].join("\n");
@@ -957,6 +1228,59 @@
           return map[type] || "テキスト / その他";
         }
 
+        function generateLearningNotes(entry) {
+          if (entry.learningNotes && entry.learningNotes.trim()) return entry.learningNotes.trim();
+          if (entry.fileType === "image") return "画像に含まれる文字や色、ロゴ位置を抽出し、ブランドトーンを回答に反映。";
+          if (entry.fileType === "pdf") return "PDFの段落ごとに要約とキーワードを抽出し、回答の根拠として保存。";
+          if (entry.fileType === "excel") return "表データのヘッダーを特徴語に変換し、行単位で検索しやすいベクトルを生成。";
+          if (entry.fileType === "doc") return "段落・見出しを解析し、重要文をまとめて回答に利用。";
+          return "ファイルを分割して埋め込み化し、登録外の質問には安全な定型文で応答。";
+        }
+
+        function describeAttachment(file, fallbackType) {
+          const type = file?.type || fallbackType;
+          if (type?.startsWith("image/")) return `${file.name} · 画像から色/文字要素を抽出`;
+          if (type?.includes("pdf")) return `${file.name} · PDFをセクション分割`;
+          if (type?.includes("csv") || type?.includes("excel") || fallbackType === "excel") return `${file.name} · テーブル構造を学習`;
+          if (type?.includes("word") || fallbackType === "doc") return `${file.name} · 見出し/本文を要約`;
+          return `${file?.name || "ファイル"} · 主要トピックを抽出`;
+        }
+
+        function renderDatasetDetails(entry, dataset) {
+          if (!datasetDetailTitle || !datasetDetailLearning || !datasetDetailFiles || !datasetDetailFileType) return;
+          if (!entry) {
+            datasetDetailTitle.textContent = "まだデータが選択されていません";
+            datasetDetailLearning.textContent = "画像やPDFなどの学習ポイントがここに表示されます。";
+            datasetDetailFiles.innerHTML = "";
+            datasetDetailFileType.textContent = "-";
+            return;
+          }
+          const folder = dataset?.folders?.find((item) => item.id === entry.folderId);
+          const files = Array.isArray(entry.files) ? entry.files : [];
+          datasetDetailTitle.textContent = `${entry.title}（${folder ? folder.name : "デフォルト"}）`;
+          datasetDetailFileType.textContent = describeFileType(entry.fileType);
+          datasetDetailLearning.textContent = generateLearningNotes(entry);
+          datasetDetailFiles.innerHTML = "";
+          if (!files.length) {
+            const li = document.createElement("li");
+            li.className = "muted";
+            li.textContent = "添付なし: URLやメモのみで学習しています。";
+            datasetDetailFiles.appendChild(li);
+          } else {
+            files.forEach((file) => {
+              const li = document.createElement("li");
+              li.innerHTML = `<div class="list-item" style="padding:0.65rem; display:flex; justify-content:space-between; align-items:center; gap:0.5rem;">
+                <div>
+                  <strong>${file.name}</strong>
+                  <div class="muted">${describeAttachment(file, entry.fileType)}</div>
+                </div>
+                <span class="pill neutral" style="margin:0;">${describeFileType(entry.fileType)}</span>
+              </div>`;
+              datasetDetailFiles.appendChild(li);
+            });
+          }
+        }
+
         function renderShareSection() {
           const apps = getApps();
           if (!apps.length || !shareBotSelect) return;
@@ -969,6 +1293,8 @@
             shareBotSelect.value = selectedShareAppId;
           }
 
+          const theme = getTheme(app?.theme);
+
           if (embedCodeOutput && app) {
             embedCodeOutput.value = buildEmbedCode(app, size);
           }
@@ -979,26 +1305,34 @@
             botUrlDisplay.textContent = `Bot URL: ${app.url}｜TRAIN: ${app.trainUrl}`;
           }
           if (botPreviewLabel && app) {
-            botPreviewLabel.textContent = `${app.name} のプレビュー (${size})`;
+            botPreviewLabel.textContent = `${app.name} のプレビュー (${size}, テーマ: ${theme.label})`;
+          }
+          if (fallbackPreview && app) {
+            fallbackPreview.style.display = "block";
+            fallbackPreview.textContent = `登録外の質問には: ${app.fallbackMessage || DEFAULT_FALLBACK_MESSAGE}`;
           }
           if (botPopupPreview && app) {
             const { width, height } = getPopupSize(size);
             botPopupPreview.innerHTML = "";
             const bubble = document.createElement("div");
             bubble.className = "embed-bubble";
+            bubble.style.borderColor = `${theme.accent}33`;
+            bubble.style.background = `linear-gradient(180deg, #ffffff, ${theme.accent}11)`;
             bubble.innerHTML = `
               <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
                 <strong style="color:#0f172a;">${app.name}</strong>
                 <span class="pill neutral" style="margin:0;">${width} × ${height}</span>
               </div>
-              <div class="muted" style="margin-bottom:0.5rem;">右下のバッジから開くポップアップを想定したプレビューです。</div>
-              <div style="height: ${Math.min(height, 260)}px; border:1px solid #e5e7eb; border-radius:10px; background:#0f172a; color:#e2e8f0; display:grid; place-items:center;">${app.url}</div>
+              <div class="muted" style="margin-bottom:0.5rem;">右下のバッジから開くポップアップを想定したプレビューです。テーマ「${theme.label}」で表示します。</div>
+              <div style="height: ${Math.min(height, 260)}px; border:1px solid ${theme.accent}44; border-radius:10px; background:${theme.frame}; color:#e2e8f0; display:grid; place-items:center;">${app.url}</div>
             `;
             const button = document.createElement("button");
             button.className = "button";
             button.type = "button";
             button.textContent = "ホームページで開くイメージ";
             button.style.justifySelf = "end";
+            button.style.background = theme.accent;
+            button.style.color = theme.buttonText;
             botPopupPreview.appendChild(bubble);
             botPopupPreview.appendChild(button);
           }
@@ -1037,6 +1371,8 @@
           datasetTableBody.innerHTML = "";
           if (!dataset.entries.length) {
             datasetEmpty.style.display = "block";
+            selectedDatasetEntryId = null;
+            renderDatasetDetails(null, dataset);
             return;
           }
           datasetEmpty.style.display = "none";
@@ -1044,6 +1380,9 @@
             .slice()
             .sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt))
             .forEach((entry) => {
+              if (!selectedDatasetEntryId) {
+                selectedDatasetEntryId = entry.id;
+              }
               const row = document.createElement("tr");
               const folder = dataset.folders.find((item) => item.id === entry.folderId);
               const files = Array.isArray(entry.files) ? entry.files : [];
@@ -1060,9 +1399,19 @@
                 <td>${folder ? folder.name : "デフォルト"}</td>
                 <td>${entry.source || "記載なし"}</td>
                 <td>${new Date(entry.addedAt).toLocaleString()}</td>
+                <td>
+                  <button type="button" class="ghost-button" data-entry="${entry.id}">詳細を見る</button>
+                </td>
               `;
               datasetTableBody.appendChild(row);
+              const actionButton = row.querySelector("button[data-entry]");
+              actionButton?.addEventListener("click", () => {
+                selectedDatasetEntryId = entry.id;
+                renderDatasetDetails(entry, dataset);
+              });
             });
+          const current = dataset.entries.find((item) => item.id === selectedDatasetEntryId);
+          renderDatasetDetails(current, dataset);
         }
 
         function renderDatasetSection() {
@@ -1071,9 +1420,13 @@
             datasetTableBody.innerHTML = "";
             datasetFolderSelect.innerHTML = "";
             datasetEmpty.style.display = "block";
+            renderDatasetDetails(null);
             return;
           }
           const dataset = ensureDataset(selectedDatasetAppId);
+          if (selectedDatasetEntryId && !dataset.entries.find((entry) => entry.id === selectedDatasetEntryId)) {
+            selectedDatasetEntryId = null;
+          }
           renderFolders(dataset);
           renderDatasetTable(dataset);
           const selectedApp = getAppById(selectedDatasetAppId);
@@ -1081,6 +1434,10 @@
             trainEmbedDatasetOutput.value = buildTrainEmbedCode(selectedApp);
           }
         }
+
+        ensureThemeOptions();
+        if (appThemeSelect && !appThemeSelect.value) appThemeSelect.value = "ocean";
+        if (fallbackInput && !fallbackInput.value) fallbackInput.value = DEFAULT_FALLBACK_MESSAGE;
 
         tabButtons.forEach((button) => {
           button.addEventListener("click", () => activateTab(button.dataset.tab));
@@ -1093,6 +1450,8 @@
           const purpose = document.getElementById("app-purpose").value.trim();
           const model = document.getElementById("app-model").value;
           const sources = document.getElementById("app-sources").value.trim();
+          const theme = appThemeSelect?.value || "ocean";
+          const fallbackMessage = fallbackInput?.value.trim() || DEFAULT_FALLBACK_MESSAGE;
 
           if (!name) {
             showMessage(createMessage, "アプリ名を入力してください。", "error");
@@ -1112,6 +1471,8 @@
             purpose,
             model: model === "gpt-4o-mini" ? "GPT-4o mini" : model,
             sources: sources || "データソース未指定",
+            theme,
+            fallbackMessage,
             url: createAppUrl(name),
             trainUrl: createTrainUrl(name),
             createdAt: new Date().toISOString()
@@ -1130,6 +1491,8 @@
           document.getElementById("app-purpose").value = "社内ナレッジベースとGitHub READMEを検索して回答するチャットUIを生成";
           document.getElementById("app-model").value = "gpt-4o-mini";
           document.getElementById("app-sources").value = "Notion, GitHub repo, Slack export";
+          if (appThemeSelect) appThemeSelect.value = "lavender";
+          if (fallbackInput) fallbackInput.value = DEFAULT_FALLBACK_MESSAGE;
           showMessage(createMessage, "サンプルを読み込みました。このままCreateを押してください。", "success");
         });
 
@@ -1149,6 +1512,7 @@
           setTimeout(() => {
             const runs = getRuns();
             const entry = {
+              appId: selectedApp.id,
               appName: selectedApp.name,
               target: document.getElementById("deploy-target").value,
               timestamp: new Date().toISOString(),
@@ -1168,6 +1532,7 @@
 
         datasetBotSelect?.addEventListener("change", (event) => {
           selectedDatasetAppId = event.target.value;
+          selectedDatasetEntryId = null;
           renderDatasetSection();
         });
 
@@ -1212,22 +1577,26 @@
           }
           const store = loadDatasetStore();
           const dataset = ensureDataset(selectedDatasetAppId);
+          const newEntryId = `entry-${Date.now()}`;
           dataset.entries.push({
-            id: `entry-${Date.now()}`,
+            id: newEntryId,
             title,
             source,
             folderId,
             fileType,
             files: attachments,
+            learningNotes: datasetLearningInput?.value.trim() || "",
             addedAt: new Date().toISOString()
           });
           store[selectedDatasetAppId] = dataset;
           saveDatasetStore(store);
           datasetTitleInput.value = "";
           datasetSourceInput.value = "";
+          if (datasetLearningInput) datasetLearningInput.value = "";
           if (datasetFilesInput) datasetFilesInput.value = "";
           const attachmentNote = attachments.length ? ` (${attachments.length}ファイル添付)` : "";
           showMessage(datasetMessage, `学習データを保存しました${attachmentNote}。`, "success");
+          selectedDatasetEntryId = newEntryId;
           renderDatasetSection();
         });
 
