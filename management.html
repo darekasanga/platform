@@ -326,6 +326,27 @@
             <button class="secondary" type="button">Reset to defaults</button>
           </div>
         </div>
+
+        <div class="panel">
+          <h2>Change or reset password</h2>
+          <p>Update a user's password when they cannot sign in.</p>
+          <form id="password-change-form">
+            <label for="password-email">Work email</label>
+            <input id="password-email" name="password-email" type="email" placeholder="user@example.com" required />
+
+            <label for="new-password">New password</label>
+            <input id="new-password" name="new-password" type="password" placeholder="Enter a temporary password" required />
+
+            <label for="confirm-password">Confirm password</label>
+            <input id="confirm-password" name="confirm-password" type="password" placeholder="Repeat the password" required />
+
+            <div class="actions">
+              <button type="submit">Save password</button>
+              <button class="secondary" type="button" id="reset-default-password">Set to default</button>
+            </div>
+            <div class="message" id="password-message" role="status" aria-live="polite"></div>
+          </form>
+        </div>
       </div>
 
       <div class="panel" style="margin-top: 1rem;">
@@ -373,6 +394,9 @@
         const adminForm = document.getElementById("admin-account-form");
         const adminMessage = document.getElementById("admin-message");
         const addAccountButton = document.querySelector('button[type="button"]');
+        const onboardingPasswordInput = document.getElementById("onboarding-password");
+        const passwordChangeForm = document.getElementById("password-change-form");
+        const passwordMessage = document.getElementById("password-message");
 
         function loadAccounts() {
           try {
@@ -381,8 +405,9 @@
           } catch (error) {
             console.error("Failed to read stored accounts", error);
           }
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_ACCOUNTS));
-          return [...SEED_ACCOUNTS];
+          const seeded = SEED_ACCOUNTS.map((account) => ({ ...account, password: account.initialPassword || "administration" }));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded));
+          return [...seeded];
         }
 
         function saveAccounts(list) {
@@ -390,13 +415,29 @@
         }
 
         function getAccounts() {
-          return loadAccounts();
+          const accounts = loadAccounts();
+          const normalized = accounts.map((account) => ({
+            ...account,
+            password: account.password || account.initialPassword || "administration"
+          }));
+          saveAccounts(normalized);
+          return normalized;
+        }
+
+        function getOnboardingPassword() {
+          return (onboardingPasswordInput?.value || "administration").trim() || "administration";
         }
 
         function showAdminMessage(text, type) {
           if (!adminMessage) return;
           adminMessage.textContent = text;
           adminMessage.className = `message ${type}`;
+        }
+
+        function showPasswordMessage(text, type) {
+          if (!passwordMessage) return;
+          passwordMessage.textContent = text;
+          passwordMessage.className = `message ${type}`;
         }
 
         function renderDirectory() {
@@ -427,6 +468,7 @@
             showAdminMessage("このメールは既に登録されています。", "error");
             return false;
           }
+          const initialPassword = getOnboardingPassword();
           accounts.push({
             id: crypto.randomUUID ? crypto.randomUUID() : `acct-${Date.now()}`,
             name,
@@ -434,10 +476,16 @@
             role,
             status,
             lastLogin,
-            initialPassword: "administration"
+            initialPassword,
+            password: initialPassword
           });
           saveAccounts(accounts);
           return true;
+        }
+
+        function findAccount(email) {
+          const accounts = getAccounts();
+          return { account: accounts.find((acct) => acct.email.toLowerCase() === email.toLowerCase()), accounts };
         }
 
         adminForm?.addEventListener("submit", (event) => {
@@ -469,6 +517,57 @@
         addAccountButton?.addEventListener("click", () => {
           adminForm?.scrollIntoView({ behavior: "smooth" });
           document.getElementById("full-name")?.focus();
+        });
+
+        passwordChangeForm?.addEventListener("submit", (event) => {
+          event.preventDefault();
+          const email = document.getElementById("password-email").value.trim();
+          const newPassword = document.getElementById("new-password").value;
+          const confirmPassword = document.getElementById("confirm-password").value;
+
+          if (!email) {
+            showPasswordMessage("メールアドレスを入力してください。", "error");
+            return;
+          }
+
+          if (newPassword !== confirmPassword) {
+            showPasswordMessage("新しいパスワードが一致しません。", "error");
+            return;
+          }
+
+          const { account, accounts } = findAccount(email);
+          if (!account) {
+            showPasswordMessage("該当するユーザーが見つかりません。", "error");
+            return;
+          }
+
+          account.password = newPassword;
+          account.initialPassword = newPassword;
+          account.status = "Password updated";
+          saveAccounts(accounts);
+          showPasswordMessage("パスワードを更新しました。ユーザーに新しいパスワードをお知らせください。", "success");
+          renderDirectory();
+          passwordChangeForm.reset();
+        });
+
+        document.getElementById("reset-default-password")?.addEventListener("click", () => {
+          const email = document.getElementById("password-email").value.trim();
+          const { account, accounts } = findAccount(email);
+          if (!email) {
+            showPasswordMessage("メールアドレスを入力してください。", "error");
+            return;
+          }
+          if (!account) {
+            showPasswordMessage("該当するユーザーが見つかりません。", "error");
+            return;
+          }
+          const defaultPassword = getOnboardingPassword();
+          account.password = defaultPassword;
+          account.initialPassword = defaultPassword;
+          account.status = "Password reset pending";
+          saveAccounts(accounts);
+          showPasswordMessage(`初期パスワード（${defaultPassword}）にリセットしました。`, "success");
+          renderDirectory();
         });
 
         renderDirectory();
