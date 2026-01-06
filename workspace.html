@@ -285,6 +285,25 @@
         display: grid;
         gap: 1rem;
       }
+      .tab-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+      .global-selector {
+        display: grid;
+        gap: 0.35rem;
+        min-width: 260px;
+      }
+      .global-selector label {
+        font-weight: 700;
+        color: var(--text);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
       .tablist {
         display: flex;
         gap: 0.5rem;
@@ -527,6 +546,54 @@
         background: linear-gradient(180deg, #ffffff, #f3f4f6);
         border-color: #e5e7eb;
       }
+      .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1rem;
+        align-items: start;
+      }
+      .detail-section {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 1rem;
+        background: linear-gradient(180deg, #ffffff, #f8fafc);
+        display: grid;
+        gap: 0.6rem;
+      }
+      .detail-row {
+        display: grid;
+        gap: 0.2rem;
+      }
+      .detail-label {
+        color: var(--muted);
+        font-weight: 700;
+        font-size: 0.9rem;
+      }
+      .detail-theme {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.5rem 0.7rem;
+        border-radius: 10px;
+        border: 1px solid #d1d5db;
+        background: #f8fafc;
+        font-weight: 700;
+        width: fit-content;
+      }
+      .detail-preview {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 0.8rem;
+        background: linear-gradient(180deg, #ffffff, #eef2ff);
+        display: grid;
+        gap: 0.5rem;
+      }
+      .detail-preview img {
+        width: 100%;
+        border-radius: 10px;
+        border: 1px solid #d1d5db;
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+      }
     </style>
   </head>
   <body>
@@ -573,8 +640,19 @@
       </div>
 
       <div class="tab-shell" aria-label="Workspace sections">
+        <div class="tab-header">
+          <div>
+            <div class="badge" style="margin-bottom:0.4rem;">チャットボット選択</div>
+            <p class="subtle" style="margin:0;">ここで選択したボットが全タブに適用されます。</p>
+          </div>
+          <div class="global-selector">
+            <label for="global-app-select">作成済みチャットボット</label>
+            <select id="global-app-select" name="global-app-select" class="prominent-select"></select>
+          </div>
+        </div>
         <div class="tablist" role="tablist">
           <button class="active" role="tab" aria-selected="true" aria-controls="tab-create" data-tab="create">Create</button>
+          <button role="tab" aria-selected="false" aria-controls="tab-detail" data-tab="detail">Detail</button>
           <button role="tab" aria-selected="false" aria-controls="tab-run" data-tab="run">Run</button>
           <button role="tab" aria-selected="false" aria-controls="tab-share" data-tab="share">Share</button>
           <button role="tab" aria-selected="false" aria-controls="tab-train" data-tab="train">Train</button>
@@ -638,6 +716,79 @@
                 <strong>最近作成したアプリ</strong>
                 <div id="app-list" class="list"></div>
               </div>
+            </div>
+          </div>
+          <div class="tab-panel" id="tab-detail" data-tab="detail" role="tabpanel">
+            <div class="card">
+              <div class="badge">Detail</div>
+              <h3>チャットボットの基本情報とプレビュー</h3>
+              <p class="subtle">グローバル選択で指定したボットのURL、テーマ、表示イメージをまとめて確認できます。</p>
+              <div id="detail-empty" class="dataset-empty" style="display:none;">まだチャットボットがありません。Createタブから作成してください。</div>
+              <div id="detail-body" class="detail-grid">
+                <div class="detail-section">
+                  <div class="detail-row">
+                    <span class="pill neutral" style="margin:0; width: fit-content;">選択中のチャットボット</span>
+                    <h4 id="detail-name" style="margin:0;">-</h4>
+                    <p class="subtle" id="detail-purpose" style="margin:0;">用途メモがここに表示されます。</p>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">モデル</span>
+                    <div id="detail-model" class="pill" style="margin:0; width: fit-content;">-</div>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">データソース</span>
+                    <div id="detail-sources" class="theme-preview" style="width: fit-content;">
+                      <span class="theme-dot" style="background:#d1d5db;"></span>
+                      <span id="detail-source-text">-</span>
+                    </div>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">登録外の質問への回答</span>
+                    <div class="detail-note" id="detail-fallback" style="margin:0;">-</div>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">URL一覧</span>
+                    <div class="stack">
+                      <div class="url-row">
+                        <div>
+                          <strong>プレビュー</strong>
+                          <div class="muted text-mono" id="detail-preview-url" style="margin-top:0.25rem;">-</div>
+                        </div>
+                        <div class="url-actions">
+                          <button type="button" class="secondary" id="detail-open-preview">開く</button>
+                          <button type="button" class="secondary" id="detail-copy-preview">コピー</button>
+                        </div>
+                      </div>
+                      <div class="url-row">
+                        <div>
+                          <strong>TRAIN</strong>
+                          <div class="muted text-mono" id="detail-train-url" style="margin-top:0.25rem;">-</div>
+                        </div>
+                        <div class="url-actions">
+                          <button type="button" class="secondary" id="detail-open-train">開く</button>
+                          <button type="button" class="secondary" id="detail-copy-train">コピー</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">テーマ</span>
+                    <div class="detail-theme" id="detail-theme-chip">
+                      <span id="detail-theme-dot" class="theme-dot" style="background:#0ea5e9;"></span>
+                      <span id="detail-theme-text">-</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="detail-preview">
+                  <div style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                    <strong style="margin:0;">表示イメージ</strong>
+                    <span class="pill neutral" id="detail-preview-tag" style="margin:0;">テーマプレビュー</span>
+                  </div>
+                  <img id="detail-preview-image" alt="チャットボットのプレビュー" src="" />
+                  <div class="muted" id="detail-preview-caption">チャットウィンドウの色味やバッジ位置の参考イメージ</div>
+                </div>
+              </div>
+              <div id="detail-message" class="message" style="display:none;"></div>
             </div>
           </div>
           <div class="tab-panel" id="tab-run" data-tab="run" role="tabpanel">
@@ -997,8 +1148,37 @@
         const selectedThemeSelect = document.getElementById("selected-theme");
         const saveSelectedThemeButton = document.getElementById("save-selected-theme");
         const learningSummaryList = document.getElementById("learning-summary");
+        const globalAppSelect = document.getElementById("global-app-select");
+        const detailEmpty = document.getElementById("detail-empty");
+        const detailBody = document.getElementById("detail-body");
+        const detailName = document.getElementById("detail-name");
+        const detailPurpose = document.getElementById("detail-purpose");
+        const detailModel = document.getElementById("detail-model");
+        const detailSources = document.getElementById("detail-sources");
+        const detailSourceText = document.getElementById("detail-source-text");
+        const detailFallback = document.getElementById("detail-fallback");
+        const detailPreviewUrl = document.getElementById("detail-preview-url");
+        const detailTrainUrl = document.getElementById("detail-train-url");
+        const detailThemeChip = document.getElementById("detail-theme-chip");
+        const detailThemeDot = document.getElementById("detail-theme-dot");
+        const detailThemeText = document.getElementById("detail-theme-text");
+        const detailPreviewImage = document.getElementById("detail-preview-image");
+        const detailPreviewCaption = document.getElementById("detail-preview-caption");
+        const detailPreviewTag = document.getElementById("detail-preview-tag");
+        const detailMessage = document.getElementById("detail-message");
+        const detailCopyPreviewButton = document.getElementById("detail-copy-preview");
+        const detailCopyTrainButton = document.getElementById("detail-copy-train");
+        const detailOpenPreviewButton = document.getElementById("detail-open-preview");
+        const detailOpenTrainButton = document.getElementById("detail-open-train");
         const tabButtons = Array.from(document.querySelectorAll(".tablist button"));
         const tabPanels = Array.from(document.querySelectorAll(".tab-panel"));
+        const previewImage = document.getElementById("preview-image");
+        const previewFrame = document.getElementById("image-preview-frame");
+        const previewMeta = document.getElementById("preview-meta");
+        const previewTheme = document.getElementById("preview-theme");
+        const previewZoomInput = document.getElementById("preview-zoom");
+        const previewBackgroundInput = document.getElementById("preview-background");
+        let activeAppId = null;
         let selectedDatasetAppId = null;
         let selectedShareAppId = null;
         let selectedDatasetEntryId = null;
@@ -1053,6 +1233,32 @@
           if (selectedThemeSelect && !selectedThemeSelect.options.length) {
             populateThemeSelect(selectedThemeSelect, selectedThemeSelect.value || "ocean");
           }
+        }
+
+        function updateActiveApp(appId) {
+          if (!appId) return;
+          const datasetChanged = selectedDatasetAppId && selectedDatasetAppId !== appId;
+          activeAppId = appId;
+          selectedDatasetAppId = appId;
+          selectedShareAppId = appId;
+          if (datasetChanged) {
+            selectedDatasetEntryId = null;
+          }
+          if (globalAppSelect && globalAppSelect.value !== appId) {
+            globalAppSelect.value = appId;
+          }
+          if (appSelect && appSelect.value !== appId) {
+            appSelect.value = appId;
+          }
+          if (datasetBotSelect && datasetBotSelect.value !== appId) {
+            datasetBotSelect.value = appId;
+          }
+          if (shareBotSelect && shareBotSelect.value !== appId) {
+            shareBotSelect.value = appId;
+          }
+          renderShareSection();
+          renderDatasetSection();
+          renderDetailSection();
         }
 
         function getSession() {
@@ -1248,19 +1454,34 @@
           appSelect.innerHTML = "";
           datasetBotSelect.innerHTML = "";
           shareBotSelect.innerHTML = "";
+          if (globalAppSelect) globalAppSelect.innerHTML = "";
 
           if (!apps.length) {
             appList.innerHTML = '<div class="dataset-empty">まだチャットボットがありません。Createタブから作成してください。</div>';
             selectedDatasetAppId = null;
             selectedShareAppId = null;
+            activeAppId = null;
+            if (globalAppSelect) {
+              const option = document.createElement("option");
+              option.textContent = "チャットボットがありません";
+              option.value = "";
+              globalAppSelect.appendChild(option);
+              globalAppSelect.setAttribute("disabled", "true");
+            }
             renderDatasetSection();
             if (embedCodeOutput) embedCodeOutput.value = "";
             if (trainEmbedShareOutput) trainEmbedShareOutput.value = "";
             if (fallbackPreview) fallbackPreview.style.display = "none";
             if (selectedBotCard) selectedBotCard.style.display = "none";
+            renderDetailSection();
             return;
           }
 
+          if (globalAppSelect) {
+            globalAppSelect.removeAttribute("disabled");
+          }
+
+          const previousActive = activeAppId;
           apps.forEach((app) => {
             const theme = getTheme(app.theme);
             const item = document.createElement("div");
@@ -1296,15 +1517,34 @@
             shareOption.textContent = app.name;
             shareBotSelect.appendChild(shareOption);
 
+            if (globalAppSelect) {
+              const globalOption = document.createElement("option");
+              globalOption.value = app.id;
+              globalOption.textContent = app.name;
+              globalAppSelect.appendChild(globalOption);
+            }
+
             const deleteButton = item.querySelector('button[data-delete]');
             deleteButton?.addEventListener("click", () => handleDeleteApp(app.id));
           });
 
+          if (!activeAppId || !apps.find((app) => app.id === activeAppId)) {
+            activeAppId = apps[0]?.id ?? null;
+          }
+          if (previousActive && activeAppId && previousActive !== activeAppId) {
+            selectedDatasetEntryId = null;
+          }
           if (!selectedDatasetAppId || !apps.find((app) => app.id === selectedDatasetAppId)) {
             selectedDatasetAppId = apps[0]?.id ?? null;
           }
           if (!selectedShareAppId || !apps.find((app) => app.id === selectedShareAppId)) {
             selectedShareAppId = apps[0]?.id ?? null;
+          }
+          if (activeAppId && selectedDatasetAppId !== activeAppId) {
+            selectedDatasetAppId = activeAppId;
+          }
+          if (activeAppId && selectedShareAppId !== activeAppId) {
+            selectedShareAppId = activeAppId;
           }
           if (datasetBotSelect && selectedDatasetAppId) {
             datasetBotSelect.value = selectedDatasetAppId;
@@ -1312,8 +1552,15 @@
           if (shareBotSelect && selectedShareAppId) {
             shareBotSelect.value = selectedShareAppId;
           }
+          if (appSelect && activeAppId) {
+            appSelect.value = activeAppId;
+          }
+          if (globalAppSelect && activeAppId) {
+            globalAppSelect.value = activeAppId;
+          }
           renderDatasetSection();
           renderShareSection();
+          renderDetailSection();
         }
 
         function handleDeleteApp(appId) {
@@ -1331,6 +1578,9 @@
           }
           const filteredRuns = getRuns().filter((run) => run.appId !== appId && run.appName !== target.name);
           saveList(RUN_STORAGE_KEY, filteredRuns);
+          if (activeAppId === appId) {
+            activeAppId = updatedApps[0]?.id ?? null;
+          }
           if (selectedDatasetAppId === appId) {
             selectedDatasetAppId = updatedApps[0]?.id ?? null;
             selectedDatasetEntryId = null;
@@ -1733,6 +1983,58 @@
           }
         }
 
+        function renderDetailSection() {
+          if (!detailBody || !detailEmpty) return;
+          const app = activeAppId ? getAppById(activeAppId) : null;
+          if (!app) {
+            detailBody.style.display = "none";
+            detailEmpty.style.display = "block";
+            if (detailMessage) {
+              detailMessage.style.display = "none";
+            }
+            return;
+          }
+          if (detailMessage) {
+            detailMessage.style.display = "none";
+          }
+          detailBody.style.display = "grid";
+          detailEmpty.style.display = "none";
+          const theme = getTheme(app.theme);
+          if (detailName) detailName.textContent = app.name;
+          if (detailPurpose) detailPurpose.textContent = app.purpose || "用途メモがあるとここに表示されます。";
+          if (detailModel) detailModel.textContent = app.model || "GPT-4o mini";
+          if (detailSources) {
+            const dot = detailSources.querySelector(".theme-dot");
+            if (dot) dot.style.background = theme.accent;
+          }
+          if (detailSourceText) detailSourceText.textContent = app.sources || "データソース未指定";
+          if (detailFallback) detailFallback.textContent = app.fallbackMessage || DEFAULT_FALLBACK_MESSAGE;
+          if (detailPreviewUrl) {
+            detailPreviewUrl.textContent = app.url || "-";
+            detailPreviewUrl.dataset.href = app.url || "";
+          }
+          if (detailTrainUrl) {
+            detailTrainUrl.textContent = app.trainUrl || "-";
+            detailTrainUrl.dataset.href = app.trainUrl || "";
+          }
+          if (detailThemeText) detailThemeText.textContent = theme.label;
+          if (detailThemeDot) detailThemeDot.style.background = theme.accent;
+          if (detailThemeChip) {
+            detailThemeChip.style.borderColor = `${theme.accent}55`;
+            detailThemeChip.style.background = `linear-gradient(180deg, #ffffff, ${theme.accent}11)`;
+          }
+          if (detailPreviewTag) {
+            detailPreviewTag.textContent = `テーマ: ${theme.label}`;
+          }
+          if (detailPreviewCaption) {
+            detailPreviewCaption.textContent = `テーマ「${theme.label}」の配色とバッジ位置イメージです。`;
+          }
+          if (detailPreviewImage) {
+            detailPreviewImage.src = createPlaceholderPreview(`${app.name} (${theme.label})`, theme.accent);
+            detailPreviewImage.alt = `${app.name} のプレビュー (${theme.label})`;
+          }
+        }
+
         function showMessage(target, text, type = "success") {
           if (!target) return;
           target.style.display = "block";
@@ -1883,7 +2185,9 @@
             createdAt: new Date().toISOString()
           };
 
+          activeAppId = newApp.id;
           selectedDatasetAppId = newApp.id;
+          selectedShareAppId = newApp.id;
           apps.push(newApp);
           saveList(APP_STORAGE_KEY, apps);
           appBuilderForm.reset();
@@ -1935,10 +2239,16 @@
         runButton?.addEventListener("click", () => handleRun("Run"));
         deployButton?.addEventListener("click", () => handleRun("Deploy"));
 
+        globalAppSelect?.addEventListener("change", (event) => {
+          updateActiveApp(event.target.value);
+        });
+
+        appSelect?.addEventListener("change", (event) => {
+          updateActiveApp(event.target.value);
+        });
+
         datasetBotSelect?.addEventListener("change", (event) => {
-          selectedDatasetAppId = event.target.value;
-          selectedDatasetEntryId = null;
-          renderDatasetSection();
+          updateActiveApp(event.target.value);
         });
 
         previewZoomInput?.addEventListener("input", () => {
@@ -2018,8 +2328,7 @@
         });
 
         shareBotSelect?.addEventListener("change", (event) => {
-          selectedShareAppId = event.target.value;
-          renderShareSection();
+          updateActiveApp(event.target.value);
         });
 
         embedSizeRadios?.forEach((radio) => {
@@ -2076,6 +2385,34 @@
 
         openTrainUrlButton?.addEventListener("click", () => {
           const app = getAppById(selectedShareAppId || shareBotSelect?.value);
+          if (!app?.trainUrl) return;
+          window.open(app.trainUrl, "_blank", "width=1200,height=780");
+        });
+
+        detailCopyPreviewButton?.addEventListener("click", () => {
+          if (!activeAppId) return;
+          const app = getAppById(activeAppId);
+          if (!app?.url) return;
+          copyToClipboard(app.url, detailMessage, "プレビューURLをコピーしました。", "コピーに失敗しました。");
+        });
+
+        detailCopyTrainButton?.addEventListener("click", () => {
+          if (!activeAppId) return;
+          const app = getAppById(activeAppId);
+          if (!app?.trainUrl) return;
+          copyToClipboard(app.trainUrl, detailMessage, "TRAINページURLをコピーしました。", "コピーに失敗しました。");
+        });
+
+        detailOpenPreviewButton?.addEventListener("click", () => {
+          if (!activeAppId) return;
+          const app = getAppById(activeAppId);
+          if (!app?.url) return;
+          window.open(app.url, "_blank", "width=520,height=780");
+        });
+
+        detailOpenTrainButton?.addEventListener("click", () => {
+          if (!activeAppId) return;
+          const app = getAppById(activeAppId);
           if (!app?.trainUrl) return;
           window.open(app.trainUrl, "_blank", "width=1200,height=780");
         });
