@@ -85,6 +85,71 @@
         font-weight: 700;
         margin-right: 0.35rem;
       }
+      .stack {
+        display: grid;
+        gap: 0.75rem;
+      }
+      .field {
+        display: grid;
+        gap: 0.35rem;
+      }
+      .field label {
+        font-weight: 700;
+        color: var(--accent);
+      }
+      .field input, .field select, .field textarea {
+        width: 100%;
+        padding: 0.7rem 0.85rem;
+        border-radius: 10px;
+        border: 1px solid #d1d5db;
+        font-size: 1rem;
+        font-family: inherit;
+        background: #f9fafb;
+        transition: border-color 120ms ease-in-out, box-shadow 120ms ease-in-out;
+      }
+      .field input:focus, .field select:focus, .field textarea:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.12);
+        background: #ffffff;
+      }
+      textarea {
+        resize: vertical;
+        min-height: 88px;
+      }
+      button {
+        padding: 0.75rem 1rem;
+        border-radius: 10px;
+        border: 1px solid #0f172a;
+        background: #0f172a;
+        color: #ffffff;
+        font-weight: 800;
+        cursor: pointer;
+        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.16);
+        transition: transform 120ms ease-in-out, box-shadow 120ms ease-in-out;
+      }
+      button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.18);
+      }
+      .status {
+        padding: 0.75rem 0.9rem;
+        border-radius: 10px;
+        background: #ecfeff;
+        border: 1px solid rgba(14, 165, 233, 0.25);
+        color: #0f172a;
+        font-weight: 700;
+      }
+      .status.error {
+        background: #fef2f2;
+        border-color: rgba(239, 68, 68, 0.35);
+        color: #7f1d1d;
+      }
+      .status.success {
+        background: rgba(34, 197, 94, 0.12);
+        border-color: rgba(34, 197, 94, 0.35);
+        color: #14532d;
+      }
     </style>
   </head>
   <body>
@@ -102,12 +167,41 @@
         <ul class="list" id="file-list"></ul>
       </div>
       <div class="card">
+        <h3 style="margin: 0 0 0.3rem;">学習データを投稿</h3>
+        <p class="muted" style="margin: 0 0 0.85rem;">このプレビューでは、ブラウザ内だけで学習データを追加できます（外部送信なし）。</p>
+        <form id="train-form" class="stack">
+          <div class="field">
+            <label for="train-title">タイトル</label>
+            <input id="train-title" name="train-title" type="text" placeholder="API v2 docs など" required />
+          </div>
+          <div class="field">
+            <label for="train-tag">データタイプ</label>
+            <select id="train-tag" name="train-tag">
+              <option value="PDF">PDF</option>
+              <option value="CSV">CSV</option>
+              <option value="Markdown">Markdown</option>
+              <option value="Image">Image</option>
+              <option value="Web">Web link</option>
+              <option value="Note">Note</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="train-note-text">メモ / 学習ポイント</label>
+            <textarea id="train-note-text" name="train-note-text" placeholder="どのように学習させたいかを記入（例: APIのステータスを要約）"></textarea>
+          </div>
+          <button type="submit">学習データとして追加</button>
+        </form>
+        <p class="muted" style="margin: 0.5rem 0 0;">投稿内容はこのブラウザにのみ保存され、リロード後も確認できます。</p>
+        <div id="train-status" class="status" style="display:none; margin-top:0.75rem;"></div>
+      </div>
+      <div class="card">
         <h3 style="margin: 0 0 0.3rem;">ノート</h3>
         <p class="muted" id="train-note" style="margin: 0;">共有用のTRAINリンクです。AWSや他サービスへのログインは不要です。</p>
       </div>
     </main>
     <script>
       (() => {
+        const STORAGE_KEY = "trainPreviewPosts";
         const params = new URLSearchParams(window.location.search);
         const botId = (params.get("bot") || "workspace-bot").trim();
 
@@ -119,33 +213,121 @@
             .trim();
         }
 
+        function loadStore() {
+          try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) return JSON.parse(raw);
+          } catch (error) {
+            console.error("Failed to read train preview storage", error);
+          }
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({}));
+          return {};
+        }
+
+        function saveStore(store) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+        }
+
+        function getUserPosts(id) {
+          const store = loadStore();
+          return Array.isArray(store[id]) ? store[id] : [];
+        }
+
+        function addUserPost(id, entry) {
+          const store = loadStore();
+          const posts = Array.isArray(store[id]) ? store[id] : [];
+          posts.push(entry);
+          store[id] = posts;
+          saveStore(store);
+          return posts;
+        }
+
         const friendlyName = formatName(botId);
-        const files = [
-          { title: "FAQ-dataset.pdf", tag: "PDF" },
-          { title: "release-notes.csv", tag: "CSV" },
-          { title: "api-handbook.md", tag: "Markdown" }
+        const defaultFiles = [
+          { title: "FAQ-dataset.pdf", tag: "PDF", note: "サンプルファイル", createdAt: new Date().toISOString() },
+          { title: "release-notes.csv", tag: "CSV", note: "リリース概要を読み込み", createdAt: new Date().toISOString() },
+          { title: "api-handbook.md", tag: "Markdown", note: "APIハンドブックを索引用に分割", createdAt: new Date().toISOString() }
         ];
 
         document.getElementById("train-title").textContent = `${friendlyName} · TRAINプレビュー`;
-        document.getElementById("train-subtitle").textContent = `${friendlyName} の学習データをサンプルで表示しています。`;
+        document.getElementById("train-subtitle").textContent = `${friendlyName} の学習データをサンプル表示し、投稿も試せます。`;
         document.getElementById("train-tag").textContent = `Preview: ${botId}`;
-        document.getElementById("train-note").textContent = `${window.location.origin} でホストされるプレビューのため、外部ログインなしで確認できます。`;
+        document.getElementById("train-note").textContent = `${window.location.origin} でホストされるプレビューのため、外部ログインなしで確認できます。投稿はブラウザ内に保存されます。`;
 
-        const list = document.getElementById("file-list");
-        files.forEach((file) => {
-          const li = document.createElement("li");
-          li.className = "list-item";
-          li.innerHTML = `
+        function formatTimestamp(value) {
+          try {
+            return new Date(value).toLocaleString();
+          } catch (error) {
+            return "";
+          }
+        }
+
+        function renderFiles() {
+          const list = document.getElementById("file-list");
+          const userPosts = getUserPosts(botId);
+          const files = [...defaultFiles, ...userPosts];
+
+          list.innerHTML = "";
+          if (!files.length) {
+            const empty = document.createElement("li");
+            empty.className = "list-item muted";
+            empty.textContent = "まだデータがありません。下のフォームから投稿してください。";
+            list.appendChild(empty);
+            return;
+          }
+
+          files.forEach((file) => {
+            const li = document.createElement("li");
+            li.className = "list-item";
+            const note = file.note || (file.fromUser ? "投稿された学習メモ" : "サンプルファイル");
+            const created = file.createdAt ? ` · ${formatTimestamp(file.createdAt)}` : "";
+            li.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; gap:0.75rem; flex-wrap:wrap;">
               <div>
                 <strong>${file.title}</strong>
-                <div class="muted">サンプルファイル</div>
+                <div class="muted">${note}${file.fromUser ? "（ローカル保存）" : ""}${created}</div>
               </div>
               <span class="pill">${file.tag}</span>
             </div>
           `;
-          list.appendChild(li);
-        });
+            list.appendChild(li);
+          });
+        }
+
+        function setStatus(text, type = "success") {
+          const status = document.getElementById("train-status");
+          if (!status) return;
+          status.style.display = "block";
+          status.textContent = text;
+          status.className = `status ${type}`;
+        }
+
+        function handleSubmit(event) {
+          event.preventDefault();
+          const titleInput = document.getElementById("train-title");
+          const tagSelect = document.getElementById("train-tag");
+          const noteInput = document.getElementById("train-note-text");
+          if (!titleInput?.value.trim()) {
+            setStatus("タイトルを入力してください。", "error");
+            return;
+          }
+          const entry = {
+            title: titleInput.value.trim(),
+            tag: tagSelect?.value || "Note",
+            note: noteInput?.value.trim() || "メモのみで学習",
+            fromUser: true,
+            createdAt: new Date().toISOString()
+          };
+          addUserPost(botId, entry);
+          setStatus("学習データとして追加しました。ブラウザに保存されます。", "success");
+          if (event.target instanceof HTMLFormElement) {
+            event.target.reset();
+          }
+          renderFiles();
+        }
+
+        document.getElementById("train-form")?.addEventListener("submit", handleSubmit);
+        renderFiles();
       })();
     </script>
   </body>

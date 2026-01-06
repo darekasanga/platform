@@ -64,6 +64,25 @@
         color: #bae6fd;
         font-weight: 700;
       }
+      .nameplate {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.45rem 0.75rem;
+        border-radius: 12px;
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        color: #e2e8f0;
+        box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+      }
+      .nameplate strong {
+        font-size: 1.05rem;
+        letter-spacing: 0.01em;
+      }
+      .nameplate small {
+        color: #94a3b8;
+        font-weight: 700;
+      }
       main {
         padding: 1.25rem;
         display: grid;
@@ -140,7 +159,10 @@
           <h1 id="bot-title">Bot preview</h1>
           <p id="bot-description">チャットボットのプレビュー。ログイン不要で表示できます。</p>
         </div>
-        <span class="pill" id="bot-pill">Public preview</span>
+        <div style="display:grid; gap:0.4rem; justify-items:flex-end;">
+          <span class="nameplate"><small>Chatbot</small><strong id="bot-nameplate">Workspace bot</strong></span>
+          <span class="pill" id="bot-pill">Public preview</span>
+        </div>
       </header>
       <main>
         <div class="chat-window" aria-live="polite">
@@ -175,6 +197,7 @@
         const title = document.getElementById("bot-title");
         const description = document.getElementById("bot-description");
         const pill = document.getElementById("bot-pill");
+        const nameplate = document.getElementById("bot-nameplate");
         const meta = document.getElementById("meta-text");
         const answer = document.getElementById("bot-answer");
         const chatWindow = document.querySelector(".chat-window");
@@ -184,9 +207,23 @@
         if (title) title.textContent = `${friendlyName} プレビュー`;
         if (description) description.textContent = `${friendlyName} の応答イメージを表示しています。外部ログインなしで誰でも確認できます。`;
         if (pill) pill.textContent = `Preview: ${botId}`;
+        if (nameplate) nameplate.textContent = friendlyName;
         if (meta) meta.textContent = `${window.location.origin} · public preview`;
+        const responseTemplates = [
+          (question) => `「${question}」について確認しました。FAQと最新ステータスを照合し、重要なポイントをまとめてお伝えします。`,
+          (question) => `ご質問「${question}」を受け付けました。関連ドキュメントを参照し、次に取るべきアクションを提案します。`,
+          (question) => `「${question}」に関する情報を検索しました。過去の履歴と紐づけて簡潔に回答します。`,
+          (question) => `お問い合わせ内容「${question}」を基に、確認手順と補足のリンク案内を作成しました。`
+        ];
+
+        function buildResponse(question) {
+          const base = question || "リクエスト";
+          const template = responseTemplates[(base.length + friendlyName.length) % responseTemplates.length];
+          return `${friendlyName} (プレビュー) からの回答: ${template(base)}`;
+        }
+
         if (answer) {
-          answer.textContent = `${friendlyName} が回答例を生成しました。実際のデータは取得していませんが、共有用プレビューとしてサイトに埋め込めます。`;
+          answer.textContent = buildResponse("このチャットボットは何ができますか？");
         }
 
         function appendBubble(text, type) {
@@ -207,7 +244,7 @@
           appendBubble(question, "from-user");
           userInput.value = "";
 
-          const response = `${friendlyName} がプレビューとして回答しました: 「${question}」に基づき要約を作成しました。（デモ応答）`;
+          const response = buildResponse(question);
           setTimeout(() => appendBubble(response, "from-bot"), 240);
         }
 
