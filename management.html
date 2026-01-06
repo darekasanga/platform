@@ -245,6 +245,7 @@
       <h1>Account Management</h1>
       <div class="nav-actions">
         <span class="info-chip">Initial password is <strong>administration</strong> for new accounts</span>
+        <button class="secondary" type="button" id="admin-sign-out">Sign out</button>
         <a class="button secondary" href="./index.html">Back to home</a>
       </div>
     </header>
@@ -257,7 +258,7 @@
           <p class="muted">Default onboarding password is <strong>administration</strong>. Prompt users to update it at first sign-in.</p>
         </div>
         <div class="actions" style="max-width: 320px;">
-          <button type="button">Add account</button>
+          <button type="button" id="add-account">Add account</button>
           <button class="secondary" type="button">Export directory</button>
         </div>
       </section>
@@ -383,6 +384,8 @@
     </main>
     <script>
       (() => {
+        const ADMIN_SESSION_KEY = "platformAdminSession";
+        const ADMIN_REMEMBER_KEY = "platformAdminRemember";
         const STORAGE_KEY = "platformAccounts";
         const SEED_ACCOUNTS = [
           { id: "seed-1", name: "Patricia Ortega", email: "patricia@acme.io", role: "Administrator", status: "Active", lastLogin: "2 hours ago", initialPassword: "administration" },
@@ -390,13 +393,41 @@
           { id: "seed-3", name: "Helena Rossi", email: "helena.rossi@acme.io", role: "Analyst", status: "Active", lastLogin: "Aug 12", initialPassword: "administration" }
         ];
 
+        function requireAdminSession() {
+          const storedSession = sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_REMEMBER_KEY);
+          if (!storedSession) {
+            window.location.href = "./admin-login.html";
+            return null;
+          }
+          try {
+            const parsed = JSON.parse(storedSession);
+            const remembered = localStorage.getItem(ADMIN_REMEMBER_KEY);
+            if (remembered) {
+              sessionStorage.setItem(ADMIN_SESSION_KEY, remembered);
+            }
+            if (parsed.role && parsed.role !== "Administrator") {
+              window.location.href = "./admin-login.html";
+              return null;
+            }
+            return parsed;
+          } catch (error) {
+            console.error("Failed to parse admin session", error);
+            window.location.href = "./admin-login.html";
+            return null;
+          }
+        }
+
+        const adminSession = requireAdminSession();
+        if (!adminSession) return;
+
         const directoryBody = document.getElementById("directory-body");
         const adminForm = document.getElementById("admin-account-form");
         const adminMessage = document.getElementById("admin-message");
-        const addAccountButton = document.querySelector('button[type="button"]');
+        const addAccountButton = document.getElementById("add-account");
         const onboardingPasswordInput = document.getElementById("onboarding-password");
         const passwordChangeForm = document.getElementById("password-change-form");
         const passwordMessage = document.getElementById("password-message");
+        const adminSignOutButton = document.getElementById("admin-sign-out");
 
         function loadAccounts() {
           try {
@@ -568,6 +599,12 @@
           saveAccounts(accounts);
           showPasswordMessage(`初期パスワード（${defaultPassword}）にリセットしました。`, "success");
           renderDirectory();
+        });
+
+        adminSignOutButton?.addEventListener("click", () => {
+          sessionStorage.removeItem(ADMIN_SESSION_KEY);
+          localStorage.removeItem(ADMIN_REMEMBER_KEY);
+          window.location.href = "./admin-login.html";
         });
 
         renderDirectory();

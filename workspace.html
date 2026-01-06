@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Platform workspace</title>
+    <style>
+      :root {
+        --bg: #f5f7fb;
+        --card: #ffffff;
+        --text: #0f172a;
+        --muted: #4b5563;
+        --accent: #0055ff;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+      header {
+        background: #0f172a;
+        color: #ffffff;
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+      header h1 {
+        margin: 0;
+      }
+      main {
+        max-width: 980px;
+        margin: 2rem auto;
+        padding: 0 1.5rem 2rem;
+        display: grid;
+        gap: 1rem;
+      }
+      .card {
+        background: var(--card);
+        border-radius: 14px;
+        padding: 1.5rem;
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.07);
+      }
+      .subtle {
+        color: var(--muted);
+        margin: 0.25rem 0 0.75rem;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        background: rgba(0, 85, 255, 0.1);
+        color: var(--accent);
+        border-radius: 999px;
+        padding: 0.45rem 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        border: 1px solid rgba(0, 85, 255, 0.25);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1rem;
+      }
+      .stat {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+      .stat strong {
+        font-size: 1.5rem;
+      }
+      .actions {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+      }
+      a.button, button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        padding: 0.75rem 1rem;
+        border-radius: 10px;
+        border: 1px solid rgba(0, 85, 255, 0.35);
+        background: var(--accent);
+        color: #ffffff;
+        font-weight: 700;
+        cursor: pointer;
+        text-decoration: none;
+        transition: transform 120ms ease-in-out, box-shadow 120ms ease-in-out;
+        box-shadow: 0 10px 22px rgba(0, 85, 255, 0.22);
+      }
+      a.button.secondary, button.secondary {
+        background: #ffffff;
+        color: var(--text);
+        border-color: #d1d5db;
+        box-shadow: none;
+      }
+      button:hover, a.button:hover {
+        transform: translateY(-1px);
+      }
+      .muted {
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      .message {
+        margin-top: 0.65rem;
+        padding: 0.8rem 1rem;
+        border-radius: 12px;
+        font-weight: 700;
+        background: rgba(34, 197, 94, 0.1);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+        color: #166534;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Platform workspace</h1>
+        <p class="subtle" id="welcome"></p>
+      </div>
+      <div class="actions">
+        <a class="button secondary" href="./index.html">Home</a>
+        <button id="sign-out" class="secondary" type="button">Sign out</button>
+      </div>
+    </header>
+    <main>
+      <div class="card">
+        <div class="badge" id="role-badge">Workspace member</div>
+        <h2 id="user-name" style="margin: 0.5rem 0 0;">User</h2>
+        <p class="subtle" id="user-email"></p>
+        <p class="muted">You are signed in to Platform. Explore runs, monitor usage, and manage your projects.</p>
+        <div class="actions">
+          <a class="button" href="#">Open runs</a>
+          <a class="button secondary" href="#">View notifications</a>
+          <a class="button secondary" id="admin-link" href="./admin-login.html" style="display: none;">Go to admin console</a>
+        </div>
+        <div class="message" id="session-message"></div>
+      </div>
+
+      <div class="grid">
+        <div class="card stat">
+          <span class="muted">Active workflows</span>
+          <strong>8</strong>
+          <span class="muted">Updated in the last 24 hours</span>
+        </div>
+        <div class="card stat">
+          <span class="muted">Alerts</span>
+          <strong>2</strong>
+          <span class="muted">Investigate performance regressions</span>
+        </div>
+        <div class="card stat">
+          <span class="muted">Usage</span>
+          <strong>73%</strong>
+          <span class="muted">Of monthly allocation</span>
+        </div>
+      </div>
+    </main>
+    <script>
+      (() => {
+        const SESSION_KEY = "platformSession";
+        const REMEMBER_KEY = "platformRemember";
+        const ADMIN_REMEMBER_KEY = "platformAdminRemember";
+        const STORAGE_KEY = "platformAccounts";
+
+        const welcomeEl = document.getElementById("welcome");
+        const nameEl = document.getElementById("user-name");
+        const emailEl = document.getElementById("user-email");
+        const roleBadge = document.getElementById("role-badge");
+        const sessionMessage = document.getElementById("session-message");
+        const signOutButton = document.getElementById("sign-out");
+        const adminLink = document.getElementById("admin-link");
+
+        function getSession() {
+          const inMemory = sessionStorage.getItem(SESSION_KEY);
+          if (inMemory) return JSON.parse(inMemory);
+          const remembered = localStorage.getItem(REMEMBER_KEY);
+          if (remembered) {
+            sessionStorage.setItem(SESSION_KEY, remembered);
+            return JSON.parse(remembered);
+          }
+          return null;
+        }
+
+        function findAccount(email) {
+          try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (!stored) return null;
+            const accounts = JSON.parse(stored);
+            return accounts.find((acct) => acct.email.toLowerCase() === email.toLowerCase()) || null;
+          } catch (error) {
+            console.error("Unable to load account details", error);
+            return null;
+          }
+        }
+
+        function render() {
+          const session = getSession();
+          if (!session) {
+            window.location.href = "./login.html";
+            return;
+          }
+          const account = findAccount(session.email) || session;
+          const role = account.role || "Workspace member";
+
+          welcomeEl.textContent = `Welcome back, ${account.name || session.email}.`;
+          nameEl.textContent = account.name || "Workspace user";
+          emailEl.textContent = account.email || session.email;
+          roleBadge.textContent = role;
+
+          const lastLogin = new Date(session.lastLogin || account.lastLogin || Date.now());
+          sessionMessage.textContent = `Last activity recorded: ${lastLogin.toLocaleString()}.`;
+
+          if (role === "Administrator") {
+            adminLink.style.display = "inline-flex";
+          } else {
+            adminLink.style.display = "none";
+          }
+        }
+
+        signOutButton?.addEventListener("click", () => {
+          sessionStorage.removeItem(SESSION_KEY);
+          sessionStorage.removeItem("platformAdminSession");
+          localStorage.removeItem(REMEMBER_KEY);
+          localStorage.removeItem(ADMIN_REMEMBER_KEY);
+          window.location.href = "./login.html";
+        });
+
+        render();
+      })();
+    </script>
+  </body>
+</html>
