@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Account Management</title>
+    <style>
+      :root {
+        --bg: #0b1224;
+        --panel: #0f172a;
+        --accent: #38bdf8;
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --radius: 14px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.12), transparent 30%),
+          radial-gradient(circle at 80% 10%, rgba(99, 102, 241, 0.12), transparent 32%),
+          linear-gradient(135deg, #0b1224, #0b162e 45%, #0b1224);
+        color: var(--text);
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.25rem 1.75rem;
+        background: rgba(15, 23, 42, 0.72);
+        backdrop-filter: blur(14px);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      }
+      header h1 {
+        margin: 0;
+        font-size: 1.5rem;
+        letter-spacing: 0.01em;
+      }
+      header .nav-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+      a.button, button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        padding: 0.68rem 1rem;
+        border-radius: 10px;
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+        color: #0b1224;
+        font-weight: 700;
+        cursor: pointer;
+        text-decoration: none;
+        transition: transform 120ms ease-in-out, box-shadow 120ms ease-in-out, filter 120ms;
+        box-shadow: 0 12px 30px rgba(56, 189, 248, 0.25);
+      }
+      a.button.secondary, button.secondary {
+        background: rgba(148, 163, 184, 0.08);
+        color: var(--text);
+        border-color: rgba(148, 163, 184, 0.35);
+        box-shadow: none;
+      }
+      button:hover, a.button:hover {
+        transform: translateY(-1px);
+        filter: brightness(1.05);
+      }
+      main {
+        max-width: 1200px;
+        margin: 2rem auto;
+        padding: 0 1.5rem 2.5rem;
+      }
+      .hero {
+        background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(56, 189, 248, 0.08)),
+          rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(56, 189, 248, 0.2);
+        border-radius: var(--radius);
+        padding: 1.5rem;
+        box-shadow: 0 16px 38px rgba(15, 23, 42, 0.3);
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 1rem;
+        align-items: center;
+      }
+      .hero p {
+        margin: 0.25rem 0 0;
+        color: var(--muted);
+      }
+      .grid {
+        margin-top: 1.5rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 1rem;
+      }
+      .panel {
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: var(--radius);
+        padding: 1.2rem 1.4rem;
+        box-shadow: 0 14px 34px rgba(0, 0, 0, 0.25);
+      }
+      .panel h2 {
+        margin: 0 0 0.35rem;
+        font-size: 1.2rem;
+      }
+      .panel p {
+        margin: 0 0 1rem;
+        color: var(--muted);
+      }
+      label {
+        display: block;
+        color: var(--muted);
+        font-size: 0.95rem;
+        margin-bottom: 0.35rem;
+      }
+      input, select {
+        width: 100%;
+        padding: 0.7rem 0.85rem;
+        border-radius: 10px;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        background: rgba(15, 23, 42, 0.7);
+        color: var(--text);
+        margin-bottom: 0.85rem;
+        font-size: 1rem;
+        transition: border-color 120ms ease-in-out, box-shadow 120ms ease-in-out;
+      }
+      input:focus, select:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+      }
+      .split {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 0.8rem;
+      }
+      .info-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        background: rgba(56, 189, 248, 0.12);
+        border: 1px solid rgba(56, 189, 248, 0.35);
+        color: #e0f2fe;
+        padding: 0.5rem 0.65rem;
+        border-radius: 999px;
+        font-weight: 600;
+        margin-top: 0.35rem;
+      }
+      .table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 0.75rem;
+      }
+      .table thead {
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      .table th, .table td {
+        padding: 0.65rem 0.5rem;
+        text-align: left;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.6rem;
+        border-radius: 999px;
+        font-size: 0.9rem;
+        font-weight: 700;
+      }
+      .badge.success {
+        background: rgba(16, 185, 129, 0.12);
+        color: #a7f3d0;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+      }
+      .badge.danger {
+        background: rgba(239, 68, 68, 0.12);
+        color: #fecdd3;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+      }
+      .badge.neutral {
+        background: rgba(148, 163, 184, 0.12);
+        color: #cbd5e1;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+      }
+      .tag-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        margin: 0.5rem 0 0.25rem;
+      }
+      .tag {
+        padding: 0.35rem 0.55rem;
+        background: rgba(148, 163, 184, 0.12);
+        color: #e2e8f0;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        border-radius: 8px;
+        font-size: 0.85rem;
+      }
+      .actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 0.65rem;
+      }
+      .actions button {
+        flex: 1 1 auto;
+        min-width: 140px;
+      }
+      .muted {
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Account Management</h1>
+      <div class="nav-actions">
+        <span class="info-chip">Initial password is <strong>administration</strong> for new accounts</span>
+        <a class="button secondary" href="./index.html">Back to home</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div>
+          <h2>Manage login access</h2>
+          <p>Provision, reset, and retire user accounts for the Platform console.</p>
+          <p class="muted">Default onboarding password is <strong>administration</strong>. Prompt users to update it at first sign-in.</p>
+        </div>
+        <div class="actions" style="max-width: 320px;">
+          <button type="button">Add account</button>
+          <button class="secondary" type="button">Export directory</button>
+        </div>
+      </section>
+
+      <div class="grid">
+        <div class="panel">
+          <h2>Create or import account</h2>
+          <p>Set user details and roles. A temporary password will be <strong>administration</strong>.</p>
+          <form>
+            <label for="full-name">Full name</label>
+            <input id="full-name" name="full-name" type="text" placeholder="Maria Chen" required />
+
+            <label for="email">Work email</label>
+            <input id="email" name="email" type="email" placeholder="maria@example.com" required />
+
+            <div class="split">
+              <div>
+                <label for="role">Role</label>
+                <select id="role" name="role">
+                  <option>Administrator</option>
+                  <option selected>Workspace Manager</option>
+                  <option>Analyst</option>
+                  <option>Read only</option>
+                </select>
+              </div>
+              <div>
+                <label for="expiration">Access expiration</label>
+                <input id="expiration" name="expiration" type="date" />
+              </div>
+            </div>
+
+            <label for="notes">Notes</label>
+            <input id="notes" name="notes" type="text" placeholder="Reason or ticket reference" />
+
+            <div class="info-chip">Initial password: administration</div>
+            <div class="actions">
+              <button type="submit">Create account</button>
+              <button class="secondary" type="button">Send welcome email</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <h2>Directory settings</h2>
+          <p>Default login policy for new users.</p>
+          <div class="tag-row">
+            <span class="tag">Password: administration</span>
+            <span class="tag">MFA required</span>
+            <span class="tag">90 day rotation</span>
+          </div>
+          <label for="onboarding-password">Initial password for new accounts</label>
+          <input id="onboarding-password" name="onboarding-password" type="text" value="administration" />
+          <div class="split">
+            <div>
+              <label for="lockout">Max failed attempts</label>
+              <input id="lockout" name="lockout" type="number" value="5" />
+            </div>
+            <div>
+              <label for="session-length">Session length (hours)</label>
+              <input id="session-length" name="session-length" type="number" value="8" />
+            </div>
+          </div>
+          <div class="actions">
+            <button type="button">Update policy</button>
+            <button class="secondary" type="button">Reset to defaults</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top: 1rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+          <div>
+            <h2>Login directory</h2>
+            <p class="muted">Review account status, reset credentials, or disable access.</p>
+          </div>
+          <div class="split" style="max-width: 460px;">
+            <input type="search" placeholder="Search by name or email" />
+            <select>
+              <option>All roles</option>
+              <option>Administrator</option>
+              <option>Workspace Manager</option>
+              <option>Analyst</option>
+              <option>Read only</option>
+            </select>
+          </div>
+        </div>
+
+        <table class="table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Last login</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div><strong>Patricia Ortega</strong></div>
+                <div class="muted">patricia@acme.io</div>
+              </td>
+              <td><span class="badge success">Administrator</span></td>
+              <td><span class="badge success">Active</span></td>
+              <td>2 hours ago</td>
+              <td><button class="secondary" type="button">Reset to administration</button></td>
+            </tr>
+            <tr>
+              <td>
+                <div><strong>Devon King</strong></div>
+                <div class="muted">devon.king@acme.io</div>
+              </td>
+              <td><span class="badge neutral">Workspace Manager</span></td>
+              <td><span class="badge danger">Password reset pending</span></td>
+              <td>Yesterday</td>
+              <td><button class="secondary" type="button">Send reset</button></td>
+            </tr>
+            <tr>
+              <td>
+                <div><strong>Helena Rossi</strong></div>
+                <div class="muted">helena.rossi@acme.io</div>
+              </td>
+              <td><span class="badge neutral">Analyst</span></td>
+              <td><span class="badge success">Active</span></td>
+              <td>Aug 12</td>
+              <td><button class="secondary" type="button">Lock account</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </body>
+</html>
