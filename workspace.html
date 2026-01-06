@@ -38,13 +38,21 @@
         margin: 2rem auto;
         padding: 0 1.5rem 2rem;
         display: grid;
-        gap: 1rem;
+        gap: 1.25rem;
       }
       .card {
         background: var(--card);
         border-radius: 14px;
         padding: 1.5rem;
         box-shadow: 0 12px 28px rgba(0, 0, 0, 0.07);
+      }
+      .card h3 {
+        margin: 0 0 0.35rem;
+      }
+      .divider {
+        height: 1px;
+        background: #e5e7eb;
+        margin: 1rem 0;
       }
       .subtle {
         color: var(--muted);
@@ -119,6 +127,69 @@
         border: 1px solid rgba(34, 197, 94, 0.3);
         color: #166534;
       }
+      .message.error {
+        background: rgba(239, 68, 68, 0.1);
+        border-color: rgba(239, 68, 68, 0.35);
+        color: #7f1d1d;
+      }
+      form .field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+      }
+      form label {
+        font-weight: 700;
+        color: var(--text);
+      }
+      form input, form select, form textarea {
+        padding: 0.75rem;
+        border-radius: 10px;
+        border: 1px solid #d1d5db;
+        font-size: 1rem;
+        font-family: inherit;
+        transition: border-color 120ms ease-in-out, box-shadow 120ms ease-in-out;
+      }
+      form input:focus, form select:focus, form textarea:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(0, 85, 255, 0.14);
+      }
+      textarea {
+        min-height: 96px;
+        resize: vertical;
+      }
+      .stack {
+        display: grid;
+        gap: 0.75rem;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.4rem 0.65rem;
+        border-radius: 999px;
+        background: #eef2ff;
+        color: #312e81;
+        font-weight: 700;
+        font-size: 0.9rem;
+      }
+      .list {
+        display: grid;
+        gap: 0.6rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .list-item {
+        padding: 0.75rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        background: #f8fafc;
+      }
+      .list-item strong {
+        display: block;
+        margin-bottom: 0.25rem;
+      }
     </style>
   </head>
   <body>
@@ -163,6 +234,76 @@
           <span class="muted">Of monthly allocation</span>
         </div>
       </div>
+
+      <div class="grid">
+        <div class="card">
+          <div class="badge">Create</div>
+          <h3>AIチャットベースのWebアプリを作成</h3>
+          <p class="subtle">ユースケース・指示・モデルを入力すると、即座にワークスペースに追加されます。</p>
+          <form id="app-builder" class="stack">
+            <div class="field">
+              <label for="app-name">アプリ名</label>
+              <input id="app-name" name="app-name" type="text" placeholder="Customer Care Copilot" required />
+            </div>
+            <div class="field">
+              <label for="app-purpose">ユースケース / ゴール</label>
+              <textarea id="app-purpose" name="app-purpose" placeholder="FAQと注文履歴を元に、24時間のサポートチャットを提供する"></textarea>
+            </div>
+            <div class="field">
+              <label for="app-model">ベースモデル</label>
+              <select id="app-model" name="app-model">
+                <option value="gpt-4o-mini">GPT-4o mini (推奨)</option>
+                <option value="gpt-4o">GPT-4o</option>
+                <option value="claude-3.5">Claude 3.5 Sonnet</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="app-sources">データソース</label>
+              <input id="app-sources" name="app-sources" type="text" placeholder="Notion、FAQ、Postgres" />
+            </div>
+            <div class="actions">
+              <button type="submit">Create</button>
+              <button class="secondary" type="button" id="app-suggest">サンプルを読み込む</button>
+            </div>
+            <div class="message" id="create-message" role="status" aria-live="polite" style="display: none;"></div>
+          </form>
+          <div class="divider"></div>
+          <div class="stack">
+            <strong>最近作成したアプリ</strong>
+            <div id="app-list" class="list"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="badge">Run</div>
+          <h3>AIアプリを実行・デプロイ</h3>
+          <p class="subtle">作成したアプリを選んで即時にテスト実行。ラン結果は履歴に残ります。</p>
+          <div class="stack">
+            <div class="field">
+              <label for="app-select">実行するアプリ</label>
+              <select id="app-select" name="app-select"></select>
+            </div>
+            <div class="field">
+              <label for="deploy-target">公開先</label>
+              <select id="deploy-target" name="deploy-target">
+                <option value="preview">プレビュー (workspace.run)</option>
+                <option value="staging">Staging</option>
+                <option value="production">Production</option>
+              </select>
+            </div>
+            <div class="actions">
+              <button type="button" id="run-app">Run</button>
+              <button class="secondary" type="button" id="deploy-app">Deploy</button>
+            </div>
+            <div class="message" id="run-message" role="status" aria-live="polite" style="display: none;"></div>
+          </div>
+          <div class="divider"></div>
+          <div class="stack">
+            <strong>Run履歴</strong>
+            <ul id="run-history" class="list"></ul>
+          </div>
+        </div>
+      </div>
     </main>
     <script>
       (() => {
@@ -170,6 +311,8 @@
         const REMEMBER_KEY = "platformRemember";
         const ADMIN_REMEMBER_KEY = "platformAdminRemember";
         const STORAGE_KEY = "platformAccounts";
+        const APP_STORAGE_KEY = "platformAiApps";
+        const RUN_STORAGE_KEY = "platformAiRuns";
 
         const welcomeEl = document.getElementById("welcome");
         const nameEl = document.getElementById("user-name");
@@ -178,6 +321,15 @@
         const sessionMessage = document.getElementById("session-message");
         const signOutButton = document.getElementById("sign-out");
         const adminLink = document.getElementById("admin-link");
+        const appBuilderForm = document.getElementById("app-builder");
+        const suggestButton = document.getElementById("app-suggest");
+        const createMessage = document.getElementById("create-message");
+        const appList = document.getElementById("app-list");
+        const appSelect = document.getElementById("app-select");
+        const runButton = document.getElementById("run-app");
+        const deployButton = document.getElementById("deploy-app");
+        const runMessage = document.getElementById("run-message");
+        const runHistory = document.getElementById("run-history");
 
         function getSession() {
           const inMemory = sessionStorage.getItem(SESSION_KEY);
@@ -202,7 +354,7 @@
           }
         }
 
-        function render() {
+        function renderSession() {
           const session = getSession();
           if (!session) {
             window.location.href = "./login.html";
@@ -226,6 +378,169 @@
           }
         }
 
+        function loadStoredList(key, fallback = []) {
+          try {
+            const raw = localStorage.getItem(key);
+            if (raw) return JSON.parse(raw);
+          } catch (error) {
+            console.error("Failed to parse storage entry", key, error);
+          }
+          localStorage.setItem(key, JSON.stringify(fallback));
+          return [...fallback];
+        }
+
+        function saveList(key, value) {
+          localStorage.setItem(key, JSON.stringify(value));
+        }
+
+        function getApps() {
+          const seeded = [
+            {
+              id: "app-support",
+              name: "Customer Care Copilot",
+              purpose: "FAQと注文履歴を用いて、顧客からの質問に24時間回答するチャットを提供",
+              model: "GPT-4o mini",
+              sources: "Notion FAQ, Order DB",
+              createdAt: new Date().toISOString()
+            }
+          ];
+          return loadStoredList(APP_STORAGE_KEY, seeded);
+        }
+
+        function getRuns() {
+          return loadStoredList(RUN_STORAGE_KEY, []);
+        }
+
+        function renderApps() {
+          const apps = getApps();
+          appList.innerHTML = "";
+          appSelect.innerHTML = "";
+
+          apps.forEach((app) => {
+            const item = document.createElement("div");
+            item.className = "list-item";
+            item.innerHTML = `
+              <strong>${app.name}</strong>
+              <div class="muted">${app.purpose || "AIチャットアプリ"}</div>
+              <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.35rem;">
+                <span class="pill">${app.model || "GPT-4o mini"}</span>
+                <span class="pill" style="background:#ecfeff; color:#0b5ed7;">${app.sources || "データソース未指定"}</span>
+              </div>
+            `;
+            appList.appendChild(item);
+
+            const option = document.createElement("option");
+            option.value = app.id;
+            option.textContent = app.name;
+            appSelect.appendChild(option);
+          });
+        }
+
+        function renderRuns() {
+          const runs = getRuns();
+          runHistory.innerHTML = "";
+          if (!runs.length) {
+            const empty = document.createElement("li");
+            empty.className = "list-item";
+            empty.textContent = "まだRunはありません。作成したアプリを実行してください。";
+            runHistory.appendChild(empty);
+            return;
+          }
+          runs.slice(-5).reverse().forEach((run) => {
+            const item = document.createElement("li");
+            item.className = "list-item";
+            item.innerHTML = `
+              <strong>${run.appName}</strong>
+              <div class="muted">結果: ${run.result} ・ 環境: ${run.target}</div>
+              <div class="muted">${new Date(run.timestamp).toLocaleString()}</div>
+            `;
+            runHistory.appendChild(item);
+          });
+        }
+
+        function showMessage(target, text, type = "success") {
+          if (!target) return;
+          target.style.display = "block";
+          target.textContent = text;
+          target.className = `message ${type}`;
+        }
+
+        appBuilderForm?.addEventListener("submit", (event) => {
+          event.preventDefault();
+          const name = document.getElementById("app-name").value.trim();
+          const purpose = document.getElementById("app-purpose").value.trim();
+          const model = document.getElementById("app-model").value;
+          const sources = document.getElementById("app-sources").value.trim();
+
+          if (!name) {
+            showMessage(createMessage, "アプリ名を入力してください。", "error");
+            return;
+          }
+
+          const apps = getApps();
+          const exists = apps.some((app) => app.name.toLowerCase() === name.toLowerCase());
+          if (exists) {
+            showMessage(createMessage, "同名のアプリが既に存在します。別の名前を指定してください。", "error");
+            return;
+          }
+
+          const newApp = {
+            id: crypto.randomUUID ? crypto.randomUUID() : `app-${Date.now()}`,
+            name,
+            purpose,
+            model: model === "gpt-4o-mini" ? "GPT-4o mini" : model,
+            sources: sources || "データソース未指定",
+            createdAt: new Date().toISOString()
+          };
+
+          apps.push(newApp);
+          saveList(APP_STORAGE_KEY, apps);
+          appBuilderForm.reset();
+          showMessage(createMessage, "AIチャットベースのWebアプリを作成しました。Runでテストできます。", "success");
+          renderApps();
+        });
+
+        suggestButton?.addEventListener("click", () => {
+          document.getElementById("app-name").value = "Docs Q&A Copilot";
+          document.getElementById("app-purpose").value = "社内ナレッジベースとGitHub READMEを検索して回答するチャットUIを生成";
+          document.getElementById("app-model").value = "gpt-4o-mini";
+          document.getElementById("app-sources").value = "Notion, GitHub repo, Slack export";
+          showMessage(createMessage, "サンプルを読み込みました。このままCreateを押してください。", "success");
+        });
+
+        function handleRun(target) {
+          const apps = getApps();
+          const selectedId = appSelect.value || (apps[0]?.id ?? null);
+          const selectedApp = apps.find((app) => app.id === selectedId);
+          if (!selectedApp) {
+            showMessage(runMessage, "先にアプリを作成してください。", "error");
+            return;
+          }
+
+          showMessage(runMessage, `${selectedApp.name} を${target === "Deploy" ? "デプロイ" : "実行"}しています…`, "success");
+          runButton?.setAttribute("disabled", "true");
+          deployButton?.setAttribute("disabled", "true");
+
+          setTimeout(() => {
+            const runs = getRuns();
+            const entry = {
+              appName: selectedApp.name,
+              target: document.getElementById("deploy-target").value,
+              timestamp: new Date().toISOString(),
+              result: target === "Deploy" ? "デプロイ完了 (プレビューURLを発行しました)" : "成功"
+            };
+            runs.push(entry);
+            saveList(RUN_STORAGE_KEY, runs);
+            renderRuns();
+            showMessage(runMessage, target === "Deploy" ? "デプロイが完了しました。プレビューURLを共有できます。" : "Runが完了しました。チャットUIが応答可能です。", "success");
+            runButton?.removeAttribute("disabled");
+            deployButton?.removeAttribute("disabled");
+          }, 850);
+        }
+
+        runButton?.addEventListener("click", () => handleRun("Run"));
+        deployButton?.addEventListener("click", () => handleRun("Deploy"));
+
         signOutButton?.addEventListener("click", () => {
           sessionStorage.removeItem(SESSION_KEY);
           sessionStorage.removeItem("platformAdminSession");
@@ -234,7 +549,9 @@
           window.location.href = "./login.html";
         });
 
-        render();
+        renderApps();
+        renderRuns();
+        renderSession();
       })();
     </script>
   </body>
