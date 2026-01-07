@@ -190,6 +190,38 @@
         display: block;
         margin-bottom: 0.25rem;
       }
+      .app-list-item {
+        display: grid;
+        gap: 0.6rem;
+      }
+      .app-list-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .app-list-title {
+        display: flex;
+        gap: 0.65rem;
+        align-items: center;
+        min-width: 0;
+      }
+      .app-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        border: 1px solid #dbeafe;
+        background: #ffffff;
+        box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12);
+        flex-shrink: 0;
+      }
+      .app-list-title strong {
+        margin: 0;
+      }
+      .app-list-title .muted {
+        margin: 0.15rem 0 0;
+      }
       .folder-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -1571,14 +1603,20 @@
           const previousActive = activeAppId;
           apps.forEach((app) => {
             const theme = getTheme(app.theme);
+            const iconUrl = buildBotIconDataUrl(app);
             const item = document.createElement("div");
-            item.className = "list-item";
+            item.className = "list-item app-list-item";
             item.innerHTML = `
-              <div style="display:flex; justify-content:space-between; gap:0.5rem; align-items:center; flex-wrap:wrap;">
-                <strong>${app.name}</strong>
+              <div class="app-list-header">
+                <div class="app-list-title">
+                  <img class="app-icon" src="${iconUrl}" alt="${app.name} のアイコン" />
+                  <div>
+                    <strong>${app.name}</strong>
+                    <div class="muted">${app.purpose || "AIチャットアプリ"}</div>
+                  </div>
+                </div>
                 <button type="button" class="ghost-button" data-delete="${app.id}">削除</button>
               </div>
-              <div class="muted">${app.purpose || "AIチャットアプリ"}</div>
               <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.35rem;">
                 <span class="pill">${app.model || "GPT-4o mini"}</span>
                 <span class="pill" style="background:#ecfeff; color:#0b5ed7;">${app.sources || "データソース未指定"}</span>
