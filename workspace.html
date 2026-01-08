@@ -687,6 +687,41 @@
         gap: 0.5rem;
         flex-wrap: wrap;
       }
+      .fallback-template-panel {
+        display: grid;
+        gap: 0.5rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 0.75rem;
+        background: #ffffff;
+      }
+      .template-controls {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .template-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        gap: 0.5rem;
+      }
+      .template-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.65rem;
+        align-items: flex-start;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 0.55rem 0.65rem;
+        background: linear-gradient(180deg, #ffffff, #f8fafc);
+      }
+      .template-text {
+        margin: 0;
+        color: var(--text);
+      }
     </style>
   </head>
   <body>
@@ -846,6 +881,34 @@
                   <div class="detail-row">
                     <span class="detail-label">登録外の質問への回答</span>
                     <div class="detail-note" id="detail-fallback" style="margin:0;">-</div>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">登録外回答の方法</span>
+                    <div class="stack">
+                      <select id="fallback-mode" class="prominent-select">
+                        <option value="template">定型文を返す</option>
+                        <option value="ai">AIベースで回答する</option>
+                      </select>
+                      <p class="subtle" id="fallback-mode-note" style="margin:0;">学習データにヒットしない場合の動作を切り替えられます。</p>
+                    </div>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">定型文の登録</span>
+                    <div class="fallback-template-panel">
+                      <form id="fallback-template-form" class="stack">
+                        <label for="fallback-template-text" style="font-weight:700;">定型文本文</label>
+                        <textarea id="fallback-template-text" name="fallback-template-text" placeholder="例: 申し訳ありませんが、担当者より折り返します。" rows="2"></textarea>
+                        <div class="template-controls">
+                          <label for="fallback-template-match" class="subtle" style="margin:0;">マッチ方法</label>
+                          <select id="fallback-template-match" name="fallback-template-match">
+                            <option value="exact">完全一致で使用</option>
+                            <option value="semantic">ニュアンス判断で使用</option>
+                          </select>
+                          <button type="submit">定型文を登録</button>
+                        </div>
+                      </form>
+                      <ul id="fallback-template-list" class="template-list" aria-live="polite"></ul>
+                    </div>
                   </div>
                   <div class="detail-row">
                     <span class="detail-label">URL一覧</span>
@@ -1271,6 +1334,12 @@
         const detailSources = document.getElementById("detail-sources");
         const detailSourceText = document.getElementById("detail-source-text");
         const detailFallback = document.getElementById("detail-fallback");
+        const fallbackModeSelect = document.getElementById("fallback-mode");
+        const fallbackModeNote = document.getElementById("fallback-mode-note");
+        const fallbackTemplateForm = document.getElementById("fallback-template-form");
+        const fallbackTemplateText = document.getElementById("fallback-template-text");
+        const fallbackTemplateMatch = document.getElementById("fallback-template-match");
+        const fallbackTemplateList = document.getElementById("fallback-template-list");
         const detailLearningSummary = document.getElementById("detail-learning-summary");
         const detailPreviewUrl = document.getElementById("detail-preview-url");
         const detailTrainUrl = document.getElementById("detail-train-url");
@@ -1291,6 +1360,7 @@
         const copyIconButton = document.getElementById("copy-icon-button");
         const tabButtons = Array.from(document.querySelectorAll(".tablist button"));
         const tabPanels = Array.from(document.querySelectorAll(".tab-panel"));
+        const imagePreview = document.getElementById("image-preview");
         const previewImage = document.getElementById("preview-image");
         const previewFrame = document.getElementById("image-preview-frame");
         const previewMeta = document.getElementById("preview-meta");
@@ -1483,6 +1553,23 @@
               enriched.fallbackMessage = DEFAULT_FALLBACK_MESSAGE;
               mutated = true;
             }
+            if (!enriched.fallbackMode) {
+              enriched.fallbackMode = "template";
+              mutated = true;
+            }
+            if (!Array.isArray(enriched.fallbackTemplates)) {
+              enriched.fallbackTemplates = [];
+              mutated = true;
+            }
+            if (!enriched.fallbackTemplates.length && enriched.fallbackMessage) {
+              enriched.fallbackTemplates.push({
+                id: `${enriched.id || createSlug(enriched.name || "bot")}-template-default`,
+                text: enriched.fallbackMessage,
+                matchType: "semantic",
+                createdAt: new Date().toISOString()
+              });
+              mutated = true;
+            }
             if (!enriched.url || enriched.url.includes("workspace.run")) {
               enriched.url = createAppUrl(enriched.name);
               mutated = true;
@@ -1567,6 +1654,41 @@
           return `${PREVIEW_ORIGIN}${TRAIN_PREVIEW_PATH}?bot=${slug}`;
         }
 
+        function getFallbackTemplates(app) {
+          if (!app) return [];
+          return Array.isArray(app.fallbackTemplates) ? app.fallbackTemplates : [];
+        }
+
+        function describeMatchType(type) {
+          if (type === "exact") return "完全一致";
+          if (type === "semantic") return "ニュアンス判断";
+          return "指定なし";
+        }
+
+        function getPrimaryFallbackTemplate(app) {
+          const templates = getFallbackTemplates(app);
+          if (templates.length) return templates[0];
+          return null;
+        }
+
+        function getPrimaryFallbackText(app) {
+          const template = getPrimaryFallbackTemplate(app);
+          if (template?.text) return template.text;
+          return app?.fallbackMessage || DEFAULT_FALLBACK_MESSAGE;
+        }
+
+        function summarizeFallback(app) {
+          if (!app) return DEFAULT_FALLBACK_MESSAGE;
+          if (app.fallbackMode === "ai") {
+            return "学習データにヒットしない場合はAIベースで回答します。";
+          }
+          const templates = getFallbackTemplates(app);
+          const primary = getPrimaryFallbackText(app);
+          const matchLabel = templates.length ? describeMatchType(templates[0].matchType) : "定型文";
+          const tail = templates.length > 1 ? `（他 ${templates.length - 1} 件の定型文あり）` : "";
+          return `${matchLabel}で定型文を返す: ${primary}${tail}`;
+        }
+
         function renderApps() {
           const apps = getApps();
           appList.innerHTML = "";
@@ -1622,7 +1744,7 @@
                 <span class="pill" style="background:#ecfeff; color:#0b5ed7;">${app.sources || "データソース未指定"}</span>
                 <span class="theme-preview"><span class="theme-dot" style="background:${theme.accent};"></span>${theme.label}</span>
               </div>
-              <div class="muted text-mono" style="margin-top:0.35rem;">登録外: ${app.fallbackMessage || DEFAULT_FALLBACK_MESSAGE}</div>
+              <div class="muted text-mono" style="margin-top:0.35rem;">登録外: ${summarizeFallback(app)}</div>
               <div class="muted" style="margin-top:0.4rem;">URL: <a href="${app.url || "#"}" target="_blank" rel="noreferrer">${app.url || "割り当て中"}</a></div>
             `;
             appList.appendChild(item);
@@ -1682,6 +1804,10 @@
           }
           if (globalAppSelect && activeAppId) {
             globalAppSelect.value = activeAppId;
+          }
+          if (activeAppId) {
+            updateActiveApp(activeAppId);
+            return;
           }
           renderDatasetSection();
           renderShareSection();
@@ -1756,7 +1882,10 @@
         function buildEmbedCode(app, size) {
           const { width, height } = getPopupSize(size);
           const theme = getTheme(app.theme);
-          const safeReply = escapeForEmbed(app.fallbackMessage || DEFAULT_FALLBACK_MESSAGE);
+          const fallbackCopy = app.fallbackMode === "ai"
+            ? "学習データにない質問はAIベースで回答します"
+            : getPrimaryFallbackText(app);
+          const safeReply = escapeForEmbed(fallbackCopy || DEFAULT_FALLBACK_MESSAGE);
           return [
             '<div id="workspace-bot-launcher"></div>',
             '<script>',
@@ -1827,6 +1956,43 @@
             "})();",
             "<\/script>"
           ].join("\n");
+        }
+
+        function updateApp(appId, updater) {
+          const apps = getApps();
+          const index = apps.findIndex((app) => app.id === appId);
+          if (index === -1) return null;
+          const next = updater({ ...apps[index] });
+          if (!next) return null;
+          apps[index] = next;
+          saveList(APP_STORAGE_KEY, apps);
+          return next;
+        }
+
+        function setFallbackMode(appId, mode) {
+          if (!["ai", "template"].includes(mode)) return null;
+          return updateApp(appId, (app) => ({ ...app, fallbackMode: mode }));
+        }
+
+        function addFallbackTemplate(appId, text, matchType = "semantic") {
+          if (!text) return null;
+          const normalizedMatch = ["exact", "semantic"].includes(matchType) ? matchType : "semantic";
+          const id = `tpl-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+          return updateApp(appId, (app) => {
+            const templates = getFallbackTemplates(app);
+            const updatedTemplates = [{ id, text, matchType: normalizedMatch, createdAt: new Date().toISOString() }, ...templates];
+            const primaryFallback = getPrimaryFallbackText({ ...app, fallbackTemplates: updatedTemplates });
+            return { ...app, fallbackTemplates: updatedTemplates, fallbackMessage: primaryFallback };
+          });
+        }
+
+        function removeFallbackTemplate(appId, templateId) {
+          if (!templateId) return null;
+          return updateApp(appId, (app) => {
+            const templates = getFallbackTemplates(app).filter((item) => item.id !== templateId);
+            const primaryFallback = getPrimaryFallbackText({ ...app, fallbackTemplates: templates });
+            return { ...app, fallbackTemplates: templates, fallbackMessage: primaryFallback || app.fallbackMessage || DEFAULT_FALLBACK_MESSAGE };
+          });
         }
 
         function updateAppTheme(appId, themeKey) {
@@ -2044,6 +2210,66 @@
           });
         }
 
+        function renderFallbackTemplates(app) {
+          if (!fallbackTemplateList) return;
+          fallbackTemplateList.innerHTML = "";
+          if (!app) {
+            const item = document.createElement("li");
+            item.className = "muted";
+            item.textContent = "チャットボットを選択してください。";
+            fallbackTemplateList.appendChild(item);
+            return;
+          }
+          const templates = getFallbackTemplates(app);
+          if (!templates.length) {
+            const item = document.createElement("li");
+            item.className = "muted";
+            item.textContent = "定型文が未登録です。追加すると登録外回答に使われます。";
+            fallbackTemplateList.appendChild(item);
+            return;
+          }
+          templates.forEach((template) => {
+            const item = document.createElement("li");
+            item.className = "template-item";
+
+            const content = document.createElement("div");
+            content.style.display = "grid";
+            content.style.gap = "0.25rem";
+
+            const text = document.createElement("p");
+            text.className = "template-text";
+            text.textContent = template.text;
+
+            const meta = document.createElement("div");
+            meta.className = "muted";
+            const created = template.createdAt ? new Date(template.createdAt).toLocaleString() : "作成日未保存";
+            meta.textContent = `${describeMatchType(template.matchType)} · 登録: ${created}`;
+
+            content.appendChild(text);
+            content.appendChild(meta);
+
+            const deleteButton = document.createElement("button");
+            deleteButton.type = "button";
+            deleteButton.className = "ghost-button";
+            deleteButton.dataset.template = template.id;
+            deleteButton.textContent = "削除";
+            deleteButton.addEventListener("click", () => {
+              const removed = removeFallbackTemplate(app.id, template.id);
+              if (removed) {
+                showMessage(detailMessage, "定型文を削除しました。", "success");
+              } else {
+                showMessage(detailMessage, "定型文の削除に失敗しました。", "error");
+              }
+              renderDetailSection();
+              renderShareSection();
+            });
+
+            item.appendChild(content);
+            item.appendChild(deleteButton);
+            fallbackTemplateList.appendChild(item);
+          });
+        }
+
         function renderDatasetDetails(entry, dataset) {
           if (!datasetDetailTitle || !datasetDetailLearning || !datasetDetailFiles || !datasetDetailFileType) return;
           if (!entry) {
@@ -2171,7 +2397,9 @@
           }
           if (fallbackPreview && app) {
             fallbackPreview.style.display = "block";
-            fallbackPreview.textContent = `登録外の質問には: ${app.fallbackMessage || DEFAULT_FALLBACK_MESSAGE}`;
+            fallbackPreview.textContent = app.fallbackMode === "ai"
+              ? "登録外の質問はAIベースで回答します。"
+              : `登録外の質問には (${describeMatchType(getPrimaryFallbackTemplate(app)?.matchType)}): ${getPrimaryFallbackText(app) || DEFAULT_FALLBACK_MESSAGE}`;
           }
           if (botPopupPreview && app) {
             const { width, height } = getPopupSize(size);
@@ -2209,6 +2437,9 @@
             if (detailMessage) {
               detailMessage.style.display = "none";
             }
+            if (fallbackModeSelect) fallbackModeSelect.value = "template";
+            if (fallbackModeNote) fallbackModeNote.textContent = "チャットボットを選択すると、登録外回答のモードを設定できます。";
+            renderFallbackTemplates(null);
             renderBotIconTray();
             return;
           }
@@ -2227,7 +2458,7 @@
             if (dot) dot.style.background = theme.accent;
           }
           if (detailSourceText) detailSourceText.textContent = app.sources || "データソース未指定";
-          if (detailFallback) detailFallback.textContent = app.fallbackMessage || DEFAULT_FALLBACK_MESSAGE;
+          if (detailFallback) detailFallback.textContent = summarizeFallback(app);
           if (detailPreviewUrl) {
             detailPreviewUrl.textContent = app.url || "-";
             detailPreviewUrl.dataset.href = app.url || "";
@@ -2248,6 +2479,15 @@
           if (detailPreviewCaption) {
             detailPreviewCaption.textContent = `テーマ「${theme.label}」の配色とバッジ位置イメージです。`;
           }
+          if (fallbackModeSelect) {
+            fallbackModeSelect.value = app.fallbackMode || "template";
+          }
+          if (fallbackModeNote) {
+            fallbackModeNote.textContent = app.fallbackMode === "ai"
+              ? "学習データに該当しない場合でも、ベースモデルで自然な回答を返します。"
+              : "登録した定型文を優先して返します。完全一致/ニュアンス判断のルールを設定できます。";
+          }
+          renderFallbackTemplates(app);
           if (detailPreviewImage) {
             detailPreviewImage.src = createPlaceholderPreview(`${app.name} (${theme.label})`, theme.accent);
             detailPreviewImage.alt = `${app.name} のプレビュー (${theme.label})`;
@@ -2401,6 +2641,15 @@
             sources: sources || "データソース未指定",
             theme,
             fallbackMessage,
+            fallbackMode: "template",
+            fallbackTemplates: [
+              {
+                id: `tpl-${Date.now()}`,
+                text: fallbackMessage,
+                matchType: "semantic",
+                createdAt: new Date().toISOString()
+              }
+            ],
             url: createAppUrl(name),
             trainUrl: createTrainUrl(name),
             createdAt: new Date().toISOString()
@@ -2472,12 +2721,52 @@
           updateActiveApp(event.target.value);
         });
 
+        fallbackModeSelect?.addEventListener("change", (event) => {
+          if (!activeAppId) {
+            showMessage(detailMessage, "先にチャットボットを選択してください。", "error");
+            event.target.value = "template";
+            return;
+          }
+          const updated = setFallbackMode(activeAppId, event.target.value);
+          if (!updated) {
+            showMessage(detailMessage, "登録外回答の切り替えに失敗しました。", "error");
+            return;
+          }
+          const note = updated.fallbackMode === "ai" ? "学習データ外はAIベースで回答します。" : "登録した定型文を優先します。";
+          showMessage(detailMessage, note, "success");
+          renderShareSection();
+          renderDetailSection();
+        });
+
         previewZoomInput?.addEventListener("input", () => {
           applyPreviewZoom(previewZoomInput.value);
         });
 
         previewBackgroundInput?.addEventListener("input", () => {
           applyPreviewBackground(previewBackgroundInput.value);
+        });
+
+        fallbackTemplateForm?.addEventListener("submit", (event) => {
+          event.preventDefault();
+          if (!activeAppId) {
+            showMessage(detailMessage, "先にチャットボットを選択してください。", "error");
+            return;
+          }
+          const text = fallbackTemplateText?.value.trim();
+          const matchType = fallbackTemplateMatch?.value || "semantic";
+          if (!text) {
+            showMessage(detailMessage, "定型文を入力してください。", "error");
+            return;
+          }
+          const added = addFallbackTemplate(activeAppId, text, matchType);
+          if (!added) {
+            showMessage(detailMessage, "定型文の登録に失敗しました。", "error");
+            return;
+          }
+          if (fallbackTemplateText) fallbackTemplateText.value = "";
+          showMessage(detailMessage, "定型文を登録しました。", "success");
+          renderDetailSection();
+          renderShareSection();
         });
 
         folderForm?.addEventListener("submit", (event) => {
