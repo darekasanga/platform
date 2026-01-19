@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ローカルネットワーク設定</title>
+    <style>
+      :root {
+        --bg: #0b1224;
+        --panel: #0f172a;
+        --accent: #38bdf8;
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --radius: 14px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.12), transparent 30%),
+          linear-gradient(135deg, #0b1224, #0b162e 45%, #0b1224);
+        color: var(--text);
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.25rem 1.75rem;
+        background: rgba(15, 23, 42, 0.72);
+        backdrop-filter: blur(14px);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      }
+      header h1 {
+        margin: 0;
+        font-size: 1.5rem;
+      }
+      header a {
+        color: var(--text);
+        text-decoration: none;
+        font-weight: 600;
+      }
+      main {
+        max-width: 980px;
+        margin: 2rem auto;
+        padding: 0 1.5rem 3rem;
+      }
+      .panel {
+        background: rgba(15, 23, 42, 0.92);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: var(--radius);
+        padding: 1.5rem;
+        box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28);
+      }
+      .panel h2 {
+        margin-top: 0;
+        font-size: 1.25rem;
+      }
+      .panel p {
+        color: var(--muted);
+      }
+      label {
+        display: block;
+        margin-bottom: 0.4rem;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      input, textarea {
+        width: 100%;
+        padding: 0.7rem 0.85rem;
+        border-radius: 10px;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        background: rgba(15, 23, 42, 0.7);
+        color: var(--text);
+        font-size: 1rem;
+        margin-bottom: 1rem;
+      }
+      input:focus, textarea:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+      }
+      input[readonly] {
+        color: #cbd5f5;
+      }
+      textarea {
+        min-height: 110px;
+        resize: vertical;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+      }
+      .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        font-weight: 600;
+      }
+      .toggle input {
+        width: auto;
+        margin: 0;
+      }
+      .hint {
+        font-size: 0.92rem;
+        color: var(--muted);
+        margin-top: -0.5rem;
+        margin-bottom: 1rem;
+      }
+      .note {
+        padding: 0.75rem 1rem;
+        background: rgba(56, 189, 248, 0.08);
+        border: 1px solid rgba(56, 189, 248, 0.2);
+        border-radius: 10px;
+        color: #dbeafe;
+        font-size: 0.95rem;
+        margin-bottom: 1rem;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-top: 1rem;
+      }
+      button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        padding: 0.7rem 1.1rem;
+        border-radius: 10px;
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+        color: #0b1224;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      button.secondary {
+        background: rgba(148, 163, 184, 0.08);
+        color: var(--text);
+        border-color: rgba(148, 163, 184, 0.35);
+      }
+      .status {
+        margin-top: 1rem;
+        padding: 0.85rem 1rem;
+        border-radius: 10px;
+        font-weight: 700;
+      }
+      .status.success {
+        background: rgba(16, 185, 129, 0.12);
+        border: 1px solid rgba(16, 185, 129, 0.4);
+        color: #a7f3d0;
+      }
+      .status.warning {
+        background: rgba(245, 158, 11, 0.12);
+        border: 1px solid rgba(245, 158, 11, 0.4);
+        color: #fde68a;
+      }
+      .status.error {
+        background: rgba(239, 68, 68, 0.12);
+        border: 1px solid rgba(239, 68, 68, 0.4);
+        color: #fecdd3;
+      }
+      .meta {
+        display: grid;
+        gap: 0.35rem;
+        font-size: 0.95rem;
+        color: var(--muted);
+        margin-top: 0.75rem;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.3rem 0.6rem;
+        border-radius: 999px;
+        border: 1px solid rgba(56, 189, 248, 0.35);
+        background: rgba(56, 189, 248, 0.12);
+        color: #e0f2fe;
+        font-weight: 600;
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>ローカルネットワーク設定</h1>
+      <a href="../../management.html">← 管理ダッシュボード</a>
+    </header>
+    <main>
+      <div class="panel">
+        <h2>ローカルネットワーク機能</h2>
+        <p>園内Wi‑Fi / テザリング / 検証用ネットワークを管理画面から切り替えます。設定は保存後すぐ反映されます。</p>
+        <form id="network-settings-form">
+          <label class="toggle">
+            <input type="checkbox" id="enabled" />
+            ローカルネットワーク機能を有効化
+          </label>
+
+          <label for="local-api-base">Local API base URL</label>
+          <input type="url" id="local-api-base" placeholder="http://192.168.10.2:8787" required />
+
+          <label for="allowed-cidr">Allowed CIDR list</label>
+          <textarea id="allowed-cidr" placeholder="192.168.10.0/24, 172.20.10.0/24"></textarea>
+          <div class="hint">172.20.10.0/24 を追加すると iPhone テザリングの端末が通ります。</div>
+
+          <div class="note">
+            <strong>注意:</strong>
+            <ul>
+              <li>iPhoneテザリングでは IP帯が 172.20.10.x になります。</li>
+              <li>園内Wi‑Fiとテザリングは別ネットワークです。</li>
+              <li>管理画面が HTTPS の場合、HTTPローカルAPIは制限されることがあります。</li>
+            </ul>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="current-ip">現在のIP (表示のみ)</label>
+              <input type="text" id="current-ip" readonly placeholder="取得中..." />
+            </div>
+            <div>
+              <label for="ip-judgement">判定結果</label>
+              <input type="text" id="ip-judgement" readonly placeholder="未判定" />
+            </div>
+          </div>
+
+          <div class="actions">
+            <button type="button" id="test-connection">接続テスト</button>
+            <button type="submit">保存</button>
+          </div>
+        </form>
+        <div class="status" id="status-message" role="status" aria-live="polite"></div>
+        <div class="meta" id="meta-info"></div>
+      </div>
+    </main>
+    <script src="../admin-utils.js"></script>
+    <script>
+      (() => {
+        const session = AdminUtils.requireAdminSession();
+        if (!session) return;
+
+        const form = document.getElementById("network-settings-form");
+        const statusMessage = document.getElementById("status-message");
+        const metaInfo = document.getElementById("meta-info");
+        const allowedCidrInput = document.getElementById("allowed-cidr");
+        const currentIpInput = document.getElementById("current-ip");
+        const judgementInput = document.getElementById("ip-judgement");
+
+        function showStatus(target, text, type) {
+          if (!target) return;
+          target.textContent = text;
+          target.className = `status ${type}`;
+        }
+
+        function parseCidrs(value) {
+          return value
+            .split(/[,\n]/)
+            .map((entry) => entry.trim())
+            .filter((entry) => entry.length > 0);
+        }
+
+        function showMeta(settings) {
+          if (!metaInfo) return;
+          metaInfo.innerHTML = `
+            <div><span class="chip">Updated: ${new Date(settings.updated_at).toLocaleString()}</span></div>
+            <div>Updated by admin: ${settings.updated_by_admin_id || "-"}</div>
+          `;
+        }
+
+        function updateJudgement(ip, cidrs) {
+          if (!judgementInput) return;
+          if (!ip || ip.includes("取得")) {
+            judgementInput.value = "園外 (IP取得不可)";
+            return;
+          }
+          const allowed = AdminUtils.isIpAllowed(ip, cidrs);
+          judgementInput.value = allowed ? "園内" : "未許可";
+        }
+
+        async function loadSettings() {
+          const settings = await AdminUtils.getNetworkSettings();
+          document.getElementById("enabled").checked = settings.enabled;
+          document.getElementById("local-api-base").value = settings.local_api_base_url || "";
+          allowedCidrInput.value = (settings.allowed_cidr_list || []).join(", ");
+          showMeta(settings);
+        }
+
+        async function loadClientIp() {
+          if (!currentIpInput) return;
+          currentIpInput.value = "取得中...";
+          const ip = await AdminUtils.getClientIp();
+          currentIpInput.value = ip || "取得できません";
+          updateJudgement(ip, parseCidrs(allowedCidrInput.value));
+        }
+
+        form?.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const enabled = document.getElementById("enabled").checked;
+          const baseUrl = document.getElementById("local-api-base").value.trim();
+          const allowedCidrs = parseCidrs(allowedCidrInput.value);
+
+          if (!baseUrl) {
+            showStatus(statusMessage, "Local API base URL は必須です。", "error");
+            return;
+          }
+
+          const existing = await AdminUtils.getNetworkSettings();
+          const settings = {
+            ...existing,
+            enabled,
+            local_api_base_url: baseUrl,
+            allowed_cidr_list: allowedCidrs,
+            updated_by_admin_id: session.id,
+            updated_at: new Date().toISOString()
+          };
+
+          await AdminUtils.saveNetworkSettings(settings);
+          AdminUtils.logAudit({
+            actorAdminId: session.id,
+            action: "LOCAL_NETWORK_UPDATED",
+            meta: { enabled, allowed_cidr_count: allowedCidrs.length }
+          });
+
+          showStatus(statusMessage, "保存しました。", "success");
+          showMeta(settings);
+          updateJudgement(currentIpInput?.value, allowedCidrs);
+        });
+
+        document.getElementById("test-connection")?.addEventListener("click", async () => {
+          const baseUrl = document.getElementById("local-api-base").value.trim();
+          const allowedCidrs = parseCidrs(allowedCidrInput.value);
+          const currentIp = currentIpInput?.value === "取得できません" ? null : currentIpInput?.value;
+
+          if (!baseUrl) {
+            showStatus(statusMessage, "Local API base URL を入力してください。", "error");
+            return;
+          }
+
+          if (window.location.protocol === "https:" && baseUrl.startsWith("http://")) {
+            showStatus(statusMessage, "HTTPS画面からHTTPへの接続がブロックされています", "error");
+            return;
+          }
+
+          if (currentIp && !AdminUtils.isIpAllowed(currentIp, allowedCidrs)) {
+            showStatus(statusMessage, `IPが許可CIDR外です (${currentIp})`, "error");
+            return;
+          }
+
+          const healthUrl = `${baseUrl.replace(/\/$/, "")}/health`;
+          try {
+            const response = await fetch(healthUrl, { method: "GET" });
+            if (!response.ok) {
+              throw new Error("not ok");
+            }
+            showStatus(statusMessage, "ローカルAPIに接続できました", "success");
+            AdminUtils.logAudit({
+              actorAdminId: session.id,
+              action: "LOCAL_NETWORK_TESTED",
+              meta: { result: "success" }
+            });
+          } catch (error) {
+            showStatus(statusMessage, "到達不可（同一ネットワークにいません）", "error");
+            AdminUtils.logAudit({
+              actorAdminId: session.id,
+              action: "LOCAL_NETWORK_TESTED",
+              meta: { result: "fail" }
+            });
+          }
+        });
+
+        allowedCidrInput?.addEventListener("input", () => {
+          updateJudgement(currentIpInput?.value, parseCidrs(allowedCidrInput.value));
+        });
+
+        window.addEventListener("load", () => {
+          loadSettings();
+          loadClientIp();
+        });
+      })();
+    </script>
+  </body>
+</html>
