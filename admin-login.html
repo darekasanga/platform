@@ -115,8 +115,8 @@
         <h1>Admin console log in</h1>
         <p>Use your administrator account to manage users, policies, and credentials.</p>
         <form id="admin-login-form">
-          <label for="email">Admin email</label>
-          <input type="email" id="email" name="email" placeholder="admin@example.com" required />
+          <label for="email">Admin ID</label>
+          <input type="text" id="email" name="email" placeholder="administrater" required />
 
           <label for="password">Password</label>
           <input type="password" id="password" name="password" placeholder="••••••••" required />
@@ -141,6 +141,7 @@
           { id: "seed-3", name: "Nana Mori", email: "nana.mori@acme.io", msSubject: "m365|staff-003", role: "STAFF", status: "Active", isActive: true, lastLogin: "Aug 12", initialPassword: "administration" }
         ];
 
+        const FALLBACK_ADMIN_ID = "administrater";
         const loginForm = document.getElementById("admin-login-form");
         const loginMessage = document.getElementById("login-message");
 
@@ -190,6 +191,19 @@
           const email = document.getElementById("email").value.trim();
           const password = document.getElementById("password").value;
           const remember = document.querySelector('input[name="remember"]').checked;
+
+          if (email === FALLBACK_ADMIN_ID && password === FALLBACK_ADMIN_ID) {
+            const session = { email: FALLBACK_ADMIN_ID, name: "Administrator", role: "DIRECTOR", lastLogin: new Date().toISOString() };
+            sessionStorage.setItem("platformAdminSession", JSON.stringify(session));
+            if (remember) {
+              localStorage.setItem("platformAdminRemember", JSON.stringify(session));
+            }
+            showLoginMessage("ログインに成功しました。管理ページへ移動します。", "success");
+            setTimeout(() => {
+              window.location.href = "./management.html";
+            }, 600);
+            return;
+          }
 
           const account = findAccount(email);
           if (!account) {
