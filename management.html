@@ -263,6 +263,7 @@
           </select>
         </label>
         <span class="info-chip">Initial password is <strong>administration</strong> for new accounts</span>
+        <a class="button secondary" href="/admin/settings/wifi-local.html">Wi-Fi local settings</a>
         <button class="secondary" type="button" id="admin-sign-out">Sign out</button>
         <a class="button secondary" href="./index.html">Back to home</a>
       </div>
@@ -404,10 +405,9 @@
         </table>
       </div>
     </main>
+    <script src="./admin/admin-utils.js"></script>
     <script>
       (() => {
-        const ADMIN_SESSION_KEY = "platformAdminSession";
-        const ADMIN_REMEMBER_KEY = "platformAdminRemember";
         const STORAGE_KEY = "platformAccounts";
         const SITE_KEY = "platformActiveSite";
         const ALERT_MODE_KEY = "platformAlertMode";
@@ -418,31 +418,7 @@
           { id: "seed-3", name: "Nana Mori", email: "nana.mori@acme.io", msSubject: "m365|staff-003", role: "STAFF", status: "Active", isActive: true, lastLogin: "Aug 12", initialPassword: "administration" }
         ];
 
-        function requireAdminSession() {
-          const storedSession = sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_REMEMBER_KEY);
-          if (!storedSession) {
-            window.location.href = "./admin-login.html";
-            return null;
-          }
-          try {
-            const parsed = JSON.parse(storedSession);
-            const remembered = localStorage.getItem(ADMIN_REMEMBER_KEY);
-            if (remembered) {
-              sessionStorage.setItem(ADMIN_SESSION_KEY, remembered);
-            }
-            if (parsed.role && parsed.role !== "DIRECTOR" && parsed.role !== "DEPUTY") {
-              window.location.href = "./admin-login.html";
-              return null;
-            }
-            return parsed;
-          } catch (error) {
-            console.error("Failed to parse admin session", error);
-            window.location.href = "./admin-login.html";
-            return null;
-          }
-        }
-
-        const adminSession = requireAdminSession();
+        const adminSession = AdminUtils.requireAdminSession();
         if (!adminSession) return;
 
         const directoryBody = document.getElementById("directory-body");
@@ -670,12 +646,15 @@
           }
           logs.forEach((log) => {
             const row = document.createElement("tr");
+            const createdAt = log.createdAt || log.created_at;
+            const actor = log.actor || log.actor_admin_id || "-";
+            const meta = log.meta || log.meta_json;
             row.innerHTML = `
-              <td>${new Date(log.createdAt).toLocaleString()}</td>
-              <td>${log.actor}</td>
+              <td>${createdAt ? new Date(createdAt).toLocaleString() : "-"}</td>
+              <td>${actor}</td>
               <td>${log.action}</td>
-              <td>${log.targetUserId || "-"}</td>
-              <td>${log.meta ? JSON.stringify(log.meta) : "-"}</td>
+              <td>${log.targetUserId || log.target_user_id || "-"}</td>
+              <td>${meta ? JSON.stringify(meta) : "-"}</td>
             `;
             auditBody.appendChild(row);
           });
@@ -798,9 +777,8 @@
         });
 
         adminSignOutButton?.addEventListener("click", () => {
-          sessionStorage.removeItem(ADMIN_SESSION_KEY);
-          localStorage.removeItem(ADMIN_REMEMBER_KEY);
-          window.location.href = "./admin-login.html";
+          AdminUtils.clearAdminSession();
+          window.location.href = "/admin/login.html";
         });
 
         if (siteSelect) {

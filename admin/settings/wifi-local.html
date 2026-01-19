@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wi-Fi ローカルネットワーク設定</title>
+    <style>
+      :root {
+        --bg: #0b1224;
+        --panel: #0f172a;
+        --accent: #38bdf8;
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --radius: 14px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.12), transparent 30%),
+          linear-gradient(135deg, #0b1224, #0b162e 45%, #0b1224);
+        color: var(--text);
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.25rem 1.75rem;
+        background: rgba(15, 23, 42, 0.72);
+        backdrop-filter: blur(14px);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      }
+      header h1 {
+        margin: 0;
+        font-size: 1.5rem;
+      }
+      header a {
+        color: var(--text);
+        text-decoration: none;
+        font-weight: 600;
+      }
+      main {
+        max-width: 980px;
+        margin: 2rem auto;
+        padding: 0 1.5rem 3rem;
+      }
+      .panel {
+        background: rgba(15, 23, 42, 0.92);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: var(--radius);
+        padding: 1.5rem;
+        box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28);
+      }
+      .panel h2 {
+        margin-top: 0;
+        font-size: 1.25rem;
+      }
+      .panel p {
+        color: var(--muted);
+      }
+      label {
+        display: block;
+        margin-bottom: 0.4rem;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      input, textarea {
+        width: 100%;
+        padding: 0.7rem 0.85rem;
+        border-radius: 10px;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        background: rgba(15, 23, 42, 0.7);
+        color: var(--text);
+        font-size: 1rem;
+        margin-bottom: 1rem;
+      }
+      input:focus, textarea:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+      }
+      textarea {
+        min-height: 90px;
+        resize: vertical;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+      }
+      .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        font-weight: 600;
+      }
+      .toggle input {
+        width: auto;
+        margin: 0;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-top: 1rem;
+      }
+      button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        padding: 0.7rem 1.1rem;
+        border-radius: 10px;
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+        color: #0b1224;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      button.secondary {
+        background: rgba(148, 163, 184, 0.08);
+        color: var(--text);
+        border-color: rgba(148, 163, 184, 0.35);
+      }
+      .status {
+        margin-top: 1rem;
+        padding: 0.85rem 1rem;
+        border-radius: 10px;
+        font-weight: 700;
+      }
+      .status.success {
+        background: rgba(16, 185, 129, 0.12);
+        border: 1px solid rgba(16, 185, 129, 0.4);
+        color: #a7f3d0;
+      }
+      .status.error {
+        background: rgba(239, 68, 68, 0.12);
+        border: 1px solid rgba(239, 68, 68, 0.4);
+        color: #fecdd3;
+      }
+      .meta {
+        display: grid;
+        gap: 0.35rem;
+        font-size: 0.95rem;
+        color: var(--muted);
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.3rem 0.6rem;
+        border-radius: 999px;
+        border: 1px solid rgba(56, 189, 248, 0.35);
+        background: rgba(56, 189, 248, 0.12);
+        color: #e0f2fe;
+        font-weight: 600;
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Wi-Fi ローカルネットワーク設定</h1>
+      <a href="../../management.html">← 管理ダッシュボード</a>
+    </header>
+    <main>
+      <div class="panel">
+        <h2>ローカル接続設定</h2>
+        <p>園内LANで利用する接続先と共有キーを管理します。SSIDは表示専用です。</p>
+        <form id="wifi-settings-form">
+          <label class="toggle">
+            <input type="checkbox" id="enabled" />
+            ローカルネットワーク機能を有効化
+          </label>
+
+          <div class="row">
+            <div>
+              <label for="ssid">SSID (表示用)</label>
+              <input type="text" id="ssid" placeholder="Sensei-WiFi" />
+            </div>
+            <div>
+              <label for="site-id">Site ID</label>
+              <input type="text" id="site-id" placeholder="encho" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="local-api-base">Local API base URL</label>
+              <input type="url" id="local-api-base" placeholder="http://192.168.10.2:8787" required />
+            </div>
+            <div>
+              <label for="local-api-port">Local API port (optional)</label>
+              <input type="number" id="local-api-port" min="0" max="65535" placeholder="8787" />
+            </div>
+          </div>
+
+          <label for="allowed-cidr">Allowed CIDR list</label>
+          <textarea id="allowed-cidr" placeholder="192.168.10.0/24,10.0.0.0/24"></textarea>
+
+          <div class="row">
+            <div>
+              <label for="device-secret">Device shared secret</label>
+              <input type="password" id="device-secret" placeholder="••••••••" />
+            </div>
+            <div>
+              <label for="heartbeat">Heartbeat interval (sec)</label>
+              <input type="number" id="heartbeat" min="5" max="120" />
+            </div>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="secondary" id="copy-secret">共有キーをコピー</button>
+            <button type="button" class="secondary" id="regen-secret">共有キーを再生成</button>
+            <button type="button" id="test-connection">接続テスト</button>
+            <button type="submit">保存</button>
+          </div>
+        </form>
+        <div class="status" id="status-message" role="status" aria-live="polite"></div>
+        <div class="meta" id="meta-info"></div>
+      </div>
+      <div class="panel" style="margin-top: 1.5rem;">
+        <h2>ローカル判定の補助</h2>
+        <p>許可CIDR内かどうかの判定ユーティリティです。入力したIPが園内扱いになるかチェックします。</p>
+        <div class="row">
+          <div>
+            <label for="ip-check">IPアドレス</label>
+            <input type="text" id="ip-check" placeholder="192.168.10.42" />
+          </div>
+          <div style="display:flex; align-items: flex-end;">
+            <button type="button" class="secondary" id="check-ip" style="width:100%;">判定する</button>
+          </div>
+        </div>
+        <div class="status" id="ip-status" role="status" aria-live="polite"></div>
+      </div>
+    </main>
+    <script src="../admin-utils.js"></script>
+    <script>
+      (() => {
+        const session = AdminUtils.requireAdminSession();
+        if (!session) return;
+
+        const form = document.getElementById("wifi-settings-form");
+        const statusMessage = document.getElementById("status-message");
+        const metaInfo = document.getElementById("meta-info");
+        const allowedCidrInput = document.getElementById("allowed-cidr");
+        const deviceSecretInput = document.getElementById("device-secret");
+        const siteInput = document.getElementById("site-id");
+        const ipStatus = document.getElementById("ip-status");
+
+        function showStatus(target, text, type) {
+          if (!target) return;
+          target.textContent = text;
+          target.className = `status ${type}`;
+        }
+
+        function parseCidrs(value) {
+          return value
+            .split(",")
+            .map((entry) => entry.trim())
+            .filter((entry) => entry.length > 0);
+        }
+
+        async function loadSettings() {
+          const siteId = siteInput.value.trim() || AdminUtils.getActiveSite();
+          const settings = await AdminUtils.getWifiSettings(siteId);
+          document.getElementById("enabled").checked = settings.enabled;
+          document.getElementById("ssid").value = settings.ssid || "";
+          document.getElementById("local-api-base").value = settings.local_api_base_url || "";
+          document.getElementById("local-api-port").value = settings.local_api_port ?? "";
+          allowedCidrInput.value = (settings.allowed_cidr_list || []).join(", ");
+          document.getElementById("heartbeat").value = settings.heartbeat_interval_sec || 15;
+          deviceSecretInput.value = await AdminUtils.decryptSecret(settings.device_shared_secret);
+          showMeta(settings);
+        }
+
+        function showMeta(settings) {
+          if (!metaInfo) return;
+          metaInfo.innerHTML = `
+            <div><span class="chip">Updated: ${new Date(settings.updated_at).toLocaleString()}</span></div>
+            <div>Updated by admin: ${settings.updated_by_admin_id || "-"}</div>
+          `;
+        }
+
+        form?.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const siteId = siteInput.value.trim() || "default";
+          const enabled = document.getElementById("enabled").checked;
+          const ssid = document.getElementById("ssid").value.trim();
+          const baseUrl = document.getElementById("local-api-base").value.trim();
+          const portValue = document.getElementById("local-api-port").value;
+          const port = portValue ? Number(portValue) : null;
+          const allowedCidrs = parseCidrs(allowedCidrInput.value);
+          const heartbeat = Number(document.getElementById("heartbeat").value) || 15;
+          const secretPlain = deviceSecretInput.value.trim();
+
+          if (!baseUrl) {
+            showStatus(statusMessage, "Local API base URL は必須です。", "error");
+            return;
+          }
+
+          const existing = await AdminUtils.getWifiSettings(siteId);
+          const encryptedSecret = secretPlain
+            ? await AdminUtils.encryptSecret(secretPlain)
+            : existing.device_shared_secret;
+
+          const settings = {
+            ...existing,
+            site_id: siteId || null,
+            enabled,
+            ssid,
+            local_api_base_url: baseUrl,
+            local_api_port: Number.isNaN(port) ? null : port,
+            allowed_cidr_list: allowedCidrs,
+            device_shared_secret: encryptedSecret,
+            heartbeat_interval_sec: heartbeat,
+            updated_by_admin_id: session.id,
+            updated_at: new Date().toISOString()
+          };
+
+          await AdminUtils.saveWifiSettings(settings, siteId);
+          AdminUtils.logAudit({
+            actorAdminId: session.id,
+            action: "WIFI_LOCAL_UPDATED",
+            meta: { site_id: siteId, enabled, allowed_cidr_count: allowedCidrs.length }
+          });
+
+          showStatus(statusMessage, "保存しました。", "success");
+          showMeta(settings);
+        });
+
+        document.getElementById("regen-secret")?.addEventListener("click", async () => {
+          const fresh = AdminUtils.randomString(32);
+          deviceSecretInput.value = fresh;
+          showStatus(statusMessage, "共有キーを再生成しました。保存すると反映されます。", "success");
+        });
+
+        document.getElementById("copy-secret")?.addEventListener("click", async () => {
+          const value = deviceSecretInput.value.trim();
+          if (!value) {
+            showStatus(statusMessage, "共有キーが空です。", "error");
+            return;
+          }
+          try {
+            await navigator.clipboard.writeText(value);
+            showStatus(statusMessage, "共有キーをコピーしました。", "success");
+          } catch (error) {
+            console.error("Failed to copy", error);
+            showStatus(statusMessage, "コピーに失敗しました。", "error");
+          }
+        });
+
+        document.getElementById("test-connection")?.addEventListener("click", async () => {
+          const baseUrl = document.getElementById("local-api-base").value.trim();
+          if (!baseUrl) {
+            showStatus(statusMessage, "Local API base URL を入力してください。", "error");
+            return;
+          }
+          const healthUrl = `${baseUrl.replace(/\/$/, "")}/health`;
+          try {
+            const response = await fetch(healthUrl, { method: "GET" });
+            if (!response.ok) {
+              throw new Error("not ok");
+            }
+            showStatus(statusMessage, "接続テストに成功しました。", "success");
+            AdminUtils.logAudit({
+              actorAdminId: session.id,
+              action: "WIFI_LOCAL_TESTED",
+              meta: { site_id: siteInput.value.trim() || "default", result: "success" }
+            });
+          } catch (error) {
+            showStatus(statusMessage, "接続テストに失敗しました。URLやネットワークを確認してください。", "error");
+            AdminUtils.logAudit({
+              actorAdminId: session.id,
+              action: "WIFI_LOCAL_TESTED",
+              meta: { site_id: siteInput.value.trim() || "default", result: "fail" }
+            });
+          }
+        });
+
+        document.getElementById("check-ip")?.addEventListener("click", () => {
+          const ip = document.getElementById("ip-check").value.trim();
+          const cidrs = parseCidrs(allowedCidrInput.value);
+          if (!ip) {
+            showStatus(ipStatus, "IPアドレスを入力してください。", "error");
+            return;
+          }
+          const allowed = AdminUtils.isIpAllowed(ip, cidrs);
+          showStatus(ipStatus, allowed ? "園内ネットワークとして判定されます。" : "園外として判定されます。", allowed ? "success" : "error");
+        });
+
+        window.addEventListener("load", () => {
+          siteInput.value = AdminUtils.getActiveSite();
+          loadSettings();
+        });
+      })();
+    </script>
+  </body>
+</html>
