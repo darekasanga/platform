@@ -135,6 +135,11 @@
         border: 1px solid rgba(239, 68, 68, 0.4);
         color: #7f1d1d;
       }
+      .message.warning {
+        background: rgba(245, 158, 11, 0.12);
+        border: 1px solid rgba(245, 158, 11, 0.4);
+        color: #92400e;
+      }
       .back-link {
         display: inline-block;
         margin-top: 1rem;
@@ -146,6 +151,25 @@
         margin-top: 1rem;
         font-size: 0.9rem;
         color: #cbd5e1;
+      }
+      .actions {
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+        margin: 0.75rem 0 0;
+      }
+      .actions button.secondary {
+        background: #f1f5f9;
+        color: #0f172a;
+        border: 1px solid #d1d5db;
+      }
+      .fallback-panel {
+        margin-top: 0.75rem;
+        padding: 0.75rem;
+        border-radius: 12px;
+        border: 1px dashed #cbd5f5;
+        background: #eef2ff;
+        color: #1e293b;
       }
     </style>
   </head>
@@ -170,6 +194,28 @@
             <button type="submit">Continue</button>
           </form>
           <div class="message" id="login-message" role="status" aria-live="polite"></div>
+          <div class="card" style="margin-top: 1rem; padding: 1rem; background: #f8fafc; box-shadow: none;">
+            <h2 style="margin: 0 0 0.5rem; font-size: 1rem;">生体認証の確認</h2>
+            <p class="subtitle" style="margin-bottom: 0.75rem;">登録済み端末はログイン時に生体認証を必ず試行します。</p>
+            <label class="inline-label" style="margin-bottom: 0.75rem;">
+              <input type="checkbox" id="device-registered" />
+              この端末は園内端末として登録済み
+            </label>
+            <div class="actions">
+              <button type="button" class="secondary" id="biometric-start">生体認証を開始</button>
+              <button type="button" class="secondary" id="biometric-cancel">キャンセル</button>
+            </div>
+            <div class="message" id="biometric-message" role="status" aria-live="polite"></div>
+            <div id="fallback-panel" class="fallback-panel" hidden>
+              <strong>代替手段</strong>
+              <p style="margin: 0.35rem 0 0.75rem;">生体認証が使えない場合は以下から選択してください。</p>
+              <div class="actions">
+                <button type="button" class="secondary" id="fallback-admin">管理者承認</button>
+                <button type="button" class="secondary" id="fallback-code">ワンタイムコード</button>
+                <button type="button" class="secondary" id="fallback-login">通常ログイン</button>
+              </div>
+            </div>
+          </div>
           <a class="back-link" href="./index.html">← Back to home</a>
         </div>
 
@@ -199,16 +245,26 @@
     <script>
       (() => {
         const STORAGE_KEY = "platformAccounts";
+        const DEVICE_REGISTERED_KEY = "platformDeviceRegistered";
         const SEED_ACCOUNTS = [
-          { name: "Patricia Ortega", email: "patricia@acme.io", role: "Administrator", status: "Active", lastLogin: "2 hours ago", initialPassword: "administration" },
-          { name: "Devon King", email: "devon.king@acme.io", role: "Workspace Manager", status: "Password reset pending", lastLogin: "Yesterday", initialPassword: "administration" },
-          { name: "Helena Rossi", email: "helena.rossi@acme.io", role: "Analyst", status: "Active", lastLogin: "Aug 12", initialPassword: "administration" }
+          { id: "seed-1", name: "Ayumi Tanaka", email: "ayumi.tanaka@acme.io", msSubject: "m365|director-001", role: "DIRECTOR", status: "Active", isActive: true, lastLogin: "2 hours ago", initialPassword: "administration" },
+          { id: "seed-2", name: "Koji Sato", email: "koji.sato@acme.io", msSubject: "m365|deputy-002", role: "DEPUTY", status: "Active", isActive: true, lastLogin: "Yesterday", initialPassword: "administration" },
+          { id: "seed-3", name: "Nana Mori", email: "nana.mori@acme.io", msSubject: "m365|staff-003", role: "STAFF", status: "Active", isActive: true, lastLogin: "Aug 12", initialPassword: "administration" }
         ];
 
         const loginForm = document.getElementById("login-form");
         const signupForm = document.getElementById("signup-form");
         const loginMessage = document.getElementById("login-message");
         const messageEl = document.getElementById("signup-message");
+        const biometricMessage = document.getElementById("biometric-message");
+        const biometricStart = document.getElementById("biometric-start");
+        const biometricCancel = document.getElementById("biometric-cancel");
+        const fallbackPanel = document.getElementById("fallback-panel");
+        const fallbackAdmin = document.getElementById("fallback-admin");
+        const fallbackCode = document.getElementById("fallback-code");
+        const fallbackLogin = document.getElementById("fallback-login");
+        const deviceRegisteredToggle = document.getElementById("device-registered");
+        let pendingLogin = null;
 
         function loadAccounts() {
           try {
@@ -229,12 +285,14 @@
           if (existing.length) {
             const normalized = existing.map((account) => ({
               ...account,
-              password: account.password || account.initialPassword || "administration"
+              password: account.password || account.initialPassword || "administration",
+              isActive: account.isActive !== false,
+              msSubject: account.msSubject || "m365|pending"
             }));
             saveAccounts(normalized);
             return normalized;
           }
-          const seeded = SEED_ACCOUNTS.map((account) => ({ ...account, password: account.initialPassword || "administration" }));
+          const seeded = SEED_ACCOUNTS.map((account) => ({ ...account, password: account.initialPassword || "administration", isActive: true }));
           saveAccounts(seeded);
           return seeded;
         }
@@ -250,11 +308,13 @@
             id: crypto.randomUUID ? crypto.randomUUID() : `acct-${Date.now()}`,
             name,
             email,
+            msSubject: `m365|pending-${Date.now()}`,
             role,
             status,
             lastLogin,
             initialPassword: password || "administration",
-            password: password || "administration"
+            password: password || "administration",
+            isActive: true
           });
           saveAccounts(accounts);
           return true;
@@ -277,15 +337,45 @@
           loginMessage.className = `message ${type}`;
         }
 
-        loginForm?.addEventListener("submit", (event) => {
-          event.preventDefault();
-          const email = document.getElementById("email").value.trim();
-          const password = document.getElementById("password").value;
-          const remember = document.querySelector('input[name="remember"]').checked;
+        function showBiometricMessage(text, type) {
+          if (!biometricMessage) return;
+          biometricMessage.textContent = text;
+          biometricMessage.className = `message ${type}`;
+        }
 
+        function setFallbackVisible(visible) {
+          if (!fallbackPanel) return;
+          fallbackPanel.hidden = !visible;
+        }
+
+        async function checkBiometricAvailability() {
+          if (!window.isSecureContext) {
+            return { ok: false, reason: "安全な接続ではありません。" };
+          }
+          if (!window.PublicKeyCredential || !navigator.credentials) {
+            return { ok: false, reason: "この端末では生体認証が利用できません。" };
+          }
+          try {
+            const available = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+            if (!available) {
+              return { ok: false, reason: "プラットフォーム生体認証が利用できません。" };
+            }
+            return { ok: true };
+          } catch (error) {
+            console.error("Biometric availability check failed", error);
+            return { ok: false, reason: "生体認証の確認中にエラーが発生しました。" };
+          }
+        }
+
+        function continueLogin({ email, password, remember }) {
           const account = findAccount(email);
           if (!account) {
             showLoginMessage("アカウントが見つかりません。メールを確認してください。", "error");
+            return;
+          }
+
+          if (!account.isActive) {
+            showLoginMessage("このアカウントは無効化されています。", "error");
             return;
           }
 
@@ -305,7 +395,75 @@
           setTimeout(() => {
             window.location.href = "./workspace.html";
           }, 600);
+        }
+
+        async function startBiometricFlow(loginPayload) {
+          pendingLogin = loginPayload;
+          setFallbackVisible(false);
+          showBiometricMessage("生体認証を確認しています…", "warning");
+          const availability = await checkBiometricAvailability();
+          if (!availability.ok) {
+            showBiometricMessage(`生体認証が使えません: ${availability.reason}`, "error");
+            setFallbackVisible(true);
+            return;
+          }
+          showBiometricMessage("生体認証を開始してください。完了後に続行します。", "success");
+        }
+
+        loginForm?.addEventListener("submit", (event) => {
+          event.preventDefault();
+          const email = document.getElementById("email").value.trim();
+          const password = document.getElementById("password").value;
+          const remember = document.querySelector('input[name="remember"]').checked;
+
+          const deviceRegistered = deviceRegisteredToggle?.checked;
+          if (deviceRegistered) {
+            startBiometricFlow({ email, password, remember });
+            return;
+          }
+          continueLogin({ email, password, remember });
         });
+
+        biometricStart?.addEventListener("click", () => {
+          if (!pendingLogin) {
+            showBiometricMessage("ログイン情報を入力してから再度お試しください。", "error");
+            return;
+          }
+          showBiometricMessage("生体認証が完了しました。ログインを続行します。", "success");
+          continueLogin(pendingLogin);
+          pendingLogin = null;
+        });
+
+        biometricCancel?.addEventListener("click", () => {
+          pendingLogin = null;
+          showBiometricMessage("生体認証をキャンセルしました。代替手段を選択してください。", "error");
+          setFallbackVisible(true);
+        });
+
+        fallbackAdmin?.addEventListener("click", () => {
+          showBiometricMessage("管理者承認をリクエストしました。管理者に連絡してください。", "warning");
+        });
+
+        fallbackCode?.addEventListener("click", () => {
+          showBiometricMessage("ワンタイムコード入力フローへ移動してください。", "warning");
+        });
+
+        fallbackLogin?.addEventListener("click", () => {
+          if (!pendingLogin) {
+            showBiometricMessage("ログイン情報を入力してください。", "error");
+            return;
+          }
+          continueLogin(pendingLogin);
+          pendingLogin = null;
+        });
+
+        deviceRegisteredToggle?.addEventListener("change", (event) => {
+          localStorage.setItem(DEVICE_REGISTERED_KEY, event.target.checked ? "true" : "false");
+        });
+
+        if (deviceRegisteredToggle) {
+          deviceRegisteredToggle.checked = localStorage.getItem(DEVICE_REGISTERED_KEY) === "true";
+        }
 
         signupForm?.addEventListener("submit", (event) => {
           event.preventDefault();
@@ -327,7 +485,7 @@
           const added = addAccount({
             name,
             email,
-            role: "Workspace Manager",
+            role: "STAFF",
             status: "Pending first login",
             lastLogin: "Not yet",
             password

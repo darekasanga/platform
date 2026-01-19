@@ -30,6 +30,20 @@
         justify-content: space-between;
         gap: 1rem;
       }
+      .site-selector {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #e2e8f0;
+        font-weight: 700;
+      }
+      .site-selector select {
+        padding: 0.4rem 0.6rem;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        background: rgba(15, 23, 42, 0.8);
+        color: #ffffff;
+      }
       header h1 {
         margin: 0;
       }
@@ -131,6 +145,44 @@
         background: rgba(239, 68, 68, 0.1);
         border-color: rgba(239, 68, 68, 0.35);
         color: #7f1d1d;
+      }
+      .alert-banner {
+        background: #b91c1c;
+        color: #fff;
+        padding: 0.85rem 1.5rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+      .alert-banner button {
+        background: #fff7ed;
+        color: #b91c1c;
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        box-shadow: none;
+      }
+      .alert-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.82);
+        color: #f8fafc;
+        display: grid;
+        place-items: center;
+        z-index: 20;
+        text-align: center;
+        padding: 2rem;
+      }
+      .alert-overlay .card {
+        max-width: 520px;
+        background: #0f172a;
+        border: 1px solid rgba(248, 113, 113, 0.4);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+      }
+      body.alert-mode main {
+        filter: blur(1.5px);
+        pointer-events: none;
       }
       form .field {
         display: flex;
@@ -696,10 +748,28 @@
         <p class="subtle" id="welcome"></p>
       </div>
       <div class="actions">
+        <label class="site-selector" for="workspace-site">
+          Site
+          <select id="workspace-site" name="workspace-site">
+            <option value="encho">EnCho</option>
+            <option value="senseinimo">SenSeinimo</option>
+          </select>
+        </label>
         <a class="button secondary" href="./index.html">Home</a>
         <button id="sign-out" class="secondary" type="button">Sign out</button>
       </div>
     </header>
+    <div id="alert-banner" class="alert-banner" hidden>
+      <span>警告モードが有効です。復号/辞書アクセスは遮断されています。</span>
+      <button type="button" id="alert-contact">管理者に連絡</button>
+    </div>
+    <div id="alert-overlay" class="alert-overlay" hidden>
+      <div class="card">
+        <div class="badge" style="background: rgba(239, 68, 68, 0.2); color: #fecaca; border-color: rgba(239, 68, 68, 0.4);">ALERT MODE</div>
+        <h2 style="margin: 0.75rem 0 0.35rem;">園内の安全確認が完了するまで利用できません</h2>
+        <p class="subtle" style="color: #e2e8f0;">管理者が解除するまで操作は制限されます。必要な場合は管理者に連絡してください。</p>
+      </div>
+    </div>
     <main>
       <div class="card">
         <div class="badge" id="role-badge">Workspace member</div>
@@ -1174,6 +1244,8 @@
         const REMEMBER_KEY = "platformRemember";
         const ADMIN_REMEMBER_KEY = "platformAdminRemember";
         const STORAGE_KEY = "platformAccounts";
+        const SITE_KEY = "platformActiveSite";
+        const ALERT_MODE_KEY = "platformAlertMode";
         const APP_STORAGE_KEY = "platformAiApps";
         const RUN_STORAGE_KEY = "platformAiRuns";
         const DATASET_STORAGE_KEY = "platformBotDatasets";
@@ -1202,6 +1274,10 @@
         const sessionMessage = document.getElementById("session-message");
         const signOutButton = document.getElementById("sign-out");
         const adminLink = document.getElementById("admin-link");
+        const alertBanner = document.getElementById("alert-banner");
+        const alertOverlay = document.getElementById("alert-overlay");
+        const alertContact = document.getElementById("alert-contact");
+        const siteSelect = document.getElementById("workspace-site");
         const appBuilderForm = document.getElementById("app-builder");
         const suggestButton = document.getElementById("app-suggest");
         const createMessage = document.getElementById("create-message");
@@ -1420,11 +1496,30 @@
           const lastLogin = new Date(session.lastLogin || account.lastLogin || Date.now());
           sessionMessage.textContent = `Last activity recorded: ${lastLogin.toLocaleString()}.`;
 
-          if (role === "Administrator") {
+          if (role === "DIRECTOR" || role === "DEPUTY") {
             adminLink.style.display = "inline-flex";
           } else {
             adminLink.style.display = "none";
           }
+        }
+
+        function renderAlertMode() {
+          if (!alertBanner || !alertOverlay) return;
+          let alertMode = null;
+          try {
+            const stored = localStorage.getItem(`${ALERT_MODE_KEY}:${getActiveSite()}`);
+            alertMode = stored ? JSON.parse(stored) : null;
+          } catch (error) {
+            console.error("Failed to parse alert mode", error);
+          }
+          const isActive = alertMode && alertMode.status === "ON";
+          alertBanner.hidden = !isActive;
+          alertOverlay.hidden = !isActive;
+          document.body.classList.toggle("alert-mode", Boolean(isActive));
+        }
+
+        function getActiveSite() {
+          return siteSelect?.value || localStorage.getItem(SITE_KEY) || "encho";
         }
 
         function loadStoredList(key, fallback = []) {
@@ -2702,9 +2797,29 @@
           window.location.href = "./login.html";
         });
 
+        alertContact?.addEventListener("click", () => {
+          window.alert("管理者に連絡してください。");
+        });
+
+        siteSelect?.addEventListener("change", () => {
+          localStorage.setItem(SITE_KEY, getActiveSite());
+          renderAlertMode();
+        });
+
+        window.addEventListener("storage", (event) => {
+          if (event.key && event.key.startsWith(ALERT_MODE_KEY)) {
+            renderAlertMode();
+          }
+        });
+
+        if (siteSelect) {
+          siteSelect.value = localStorage.getItem(SITE_KEY) || "encho";
+        }
+
         renderApps();
         renderRuns();
         renderSession();
+        renderAlertMode();
       })();
     </script>
   </body>

@@ -136,9 +136,9 @@
       (() => {
         const STORAGE_KEY = "platformAccounts";
         const SEED_ACCOUNTS = [
-          { name: "Patricia Ortega", email: "patricia@acme.io", role: "Administrator", status: "Active", lastLogin: "2 hours ago", initialPassword: "administration" },
-          { name: "Devon King", email: "devon.king@acme.io", role: "Workspace Manager", status: "Password reset pending", lastLogin: "Yesterday", initialPassword: "administration" },
-          { name: "Helena Rossi", email: "helena.rossi@acme.io", role: "Analyst", status: "Active", lastLogin: "Aug 12", initialPassword: "administration" }
+          { id: "seed-1", name: "Ayumi Tanaka", email: "ayumi.tanaka@acme.io", msSubject: "m365|director-001", role: "DIRECTOR", status: "Active", isActive: true, lastLogin: "2 hours ago", initialPassword: "administration" },
+          { id: "seed-2", name: "Koji Sato", email: "koji.sato@acme.io", msSubject: "m365|deputy-002", role: "DEPUTY", status: "Active", isActive: true, lastLogin: "Yesterday", initialPassword: "administration" },
+          { id: "seed-3", name: "Nana Mori", email: "nana.mori@acme.io", msSubject: "m365|staff-003", role: "STAFF", status: "Active", isActive: true, lastLogin: "Aug 12", initialPassword: "administration" }
         ];
 
         const loginForm = document.getElementById("admin-login-form");
@@ -163,12 +163,13 @@
           if (existing.length) {
             const normalized = existing.map((account) => ({
               ...account,
-              password: account.password || account.initialPassword || "administration"
+              password: account.password || account.initialPassword || "administration",
+              isActive: account.isActive !== false
             }));
             saveAccounts(normalized);
             return normalized;
           }
-          const seeded = SEED_ACCOUNTS.map((account) => ({ ...account, password: account.initialPassword || "administration" }));
+          const seeded = SEED_ACCOUNTS.map((account) => ({ ...account, password: account.initialPassword || "administration", isActive: true }));
           saveAccounts(seeded);
           return seeded;
         }
@@ -196,8 +197,13 @@
             return;
           }
 
-          if (account.role !== "Administrator") {
-            showLoginMessage("管理ページには管理者アカウントでのみログインできます。", "error");
+          if (account.role !== "DIRECTOR" && account.role !== "DEPUTY") {
+            showLoginMessage("管理ページには園長/補佐アカウントでのみログインできます。", "error");
+            return;
+          }
+
+          if (!account.isActive) {
+            showLoginMessage("このアカウントは無効化されています。", "error");
             return;
           }
 
