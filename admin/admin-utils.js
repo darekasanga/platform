@@ -5,6 +5,7 @@
   const ADMIN_LOCK_KEY = "platformAdminLockouts";
   const ADMIN_AUDIT_LOG_KEY = "platformAdminAuditLogs";
   const WIFI_SETTINGS_KEY = "platformWifiLocalSettings";
+  const NETWORK_SETTINGS_KEY = "platformLocalNetworkSettings";
   const WIFI_SECRET_KEY = "platformWifiSecretKey";
   const SITE_KEY = "platformActiveSite";
 
@@ -296,6 +297,10 @@
     return `${WIFI_SETTINGS_KEY}:${siteId || "default"}`;
   }
 
+  function getNetworkStorageKey(siteId = getActiveSite()) {
+    return `${NETWORK_SETTINGS_KEY}:${siteId || "default"}`;
+  }
+
   function getDefaultWifiSettings(siteId = getActiveSite()) {
     return {
       id: crypto.randomUUID ? crypto.randomUUID() : `wifi-${Date.now()}`,
@@ -322,6 +327,42 @@
 
   async function saveWifiSettings(settings, siteId = getActiveSite()) {
     localStorage.setItem(getWifiStorageKey(siteId), JSON.stringify(settings));
+  }
+
+  function getDefaultNetworkSettings(siteId = getActiveSite()) {
+    return {
+      id: crypto.randomUUID ? crypto.randomUUID() : `network-${Date.now()}`,
+      site_id: siteId || null,
+      enabled: false,
+      local_api_base_url: "http://192.168.10.2:8787",
+      allowed_cidr_list: ["192.168.10.0/24"],
+      updated_by_admin_id: null,
+      updated_at: new Date().toISOString()
+    };
+  }
+
+  async function getNetworkSettings(siteId = getActiveSite()) {
+    const stored = safeParse(localStorage.getItem(getNetworkStorageKey(siteId)), null);
+    if (stored) return stored;
+    const seeded = getDefaultNetworkSettings(siteId);
+    localStorage.setItem(getNetworkStorageKey(siteId), JSON.stringify(seeded));
+    return seeded;
+  }
+
+  async function saveNetworkSettings(settings, siteId = getActiveSite()) {
+    localStorage.setItem(getNetworkStorageKey(siteId), JSON.stringify(settings));
+  }
+
+  async function getClientIp() {
+    try {
+      const response = await fetch("https://api.ipify.org?format=json");
+      if (!response.ok) throw new Error("ip fetch failed");
+      const data = await response.json();
+      return data.ip || null;
+    } catch (error) {
+      console.warn("Failed to fetch client IP", error);
+      return null;
+    }
   }
 
   function ipToInt(ip) {
@@ -362,9 +403,12 @@
     getActiveSite,
     getWifiSettings,
     saveWifiSettings,
+    getNetworkSettings,
+    saveNetworkSettings,
     encryptSecret,
     decryptSecret,
     randomString,
-    isIpAllowed
+    isIpAllowed,
+    getClientIp
   };
 })();
