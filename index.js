@@ -1,4 +1,4 @@
-// ===== Minimal runnable node pipeline =====
+// ===== Minimal runnable node pipeline with versioned daily_nodes =====
 // node index.js
 
 const crypto = require('crypto');
@@ -73,9 +73,9 @@ function encodeUnicode(internals) {
 }
 
 // --------------------
-// Build node
+// Build node payload
 // --------------------
-function buildNode(childId, yyyymmdd, events) {
+function buildNodePayload(childId, yyyymmdd, events, baseCategoryCode, derivedCategoryCode) {
   const nodeKey = hmac(`${childId}|${yyyymmdd}`);
   const lookup = base64url(nodeKey);
 
@@ -94,16 +94,113 @@ function buildNode(childId, yyyymmdd, events) {
   const state_token = encodeUnicode(internals);
 
   return {
-    v: 1,
     node_key: lookup,
     prefix12,
     date: yyyymmdd,
     state_token,
     dict_id,
     events,
+    base_category_code: baseCategoryCode,
+    derived_category_code: derivedCategoryCode,
     derived: { raw_minutes: rawMinutes, ext_minutes: extMinutes },
     __server_only: { dict: map }, // keep only on server
   };
+}
+
+// --------------------
+// Versioned daily_nodes store (SCD2)
+// --------------------
+const dailyNodes = [];
+const calcHistory = [];
+
+function inputsHash({ events, baseCategoryCode, derivedCategoryCode, policyVersion }) {
+  const payload = JSON.stringify({
+    events,
+    baseCategoryCode,
+    derivedCategoryCode,
+    policyVersion,
+  });
+  return crypto.createHash('sha256').update(payload).digest('hex');
+}
+
+function findActiveNode(childId, yyyymmdd) {
+  return dailyNodes.find(
+    (node) => node.child_id === childId && node.date === yyyymmdd && node.status === 'ACTIVE',
+  );
+}
+
+function supersedeNode(currentNode, nextNodeId) {
+  currentNode.status = 'SUPERSEDED';
+  currentNode.valid_to = new Date().toISOString();
+  currentNode.superseded_by_id = nextNodeId;
+}
+
+function createCalcHistory(dailyNode) {
+  calcHistory.push({
+    id: crypto.randomUUID(),
+    daily_node_id: dailyNode.id,
+    created_at: new Date().toISOString(),
+    snapshot: {
+      derived: dailyNode.derived,
+      derived_category_code: dailyNode.derived_category_code,
+    },
+  });
+}
+
+function rebuildDailyNode({
+  childId,
+  yyyymmdd,
+  events,
+  baseCategoryCode,
+  derivedCategoryCode,
+  policyVersion,
+  changeReasonCode,
+  changeNote,
+}) {
+  const hash = inputsHash({ events, baseCategoryCode, derivedCategoryCode, policyVersion });
+  const active = findActiveNode(childId, yyyymmdd);
+
+  if (active && active.inputs_hash === hash) {
+    return { node: active, changed: false };
+  }
+
+  const nodePayload = buildNodePayload(
+    childId,
+    yyyymmdd,
+    events,
+    baseCategoryCode,
+    derivedCategoryCode,
+  );
+  const now = new Date().toISOString();
+  const nextId = crypto.randomUUID();
+  const nextVersion = active ? active.version + 1 : 1;
+  const statementId = active ? active.statement_id : crypto.randomUUID();
+
+  if (active) {
+    supersedeNode(active, nextId);
+  }
+
+  const nextNode = {
+    id: nextId,
+    statement_id: statementId,
+    child_id: childId,
+    date: yyyymmdd,
+    version: nextVersion,
+    status: 'ACTIVE',
+    valid_from: now,
+    valid_to: null,
+    supersedes_id: active ? active.id : null,
+    superseded_by_id: null,
+    change_reason_code: changeReasonCode,
+    change_note: changeNote ?? null,
+    inputs_hash: hash,
+    ...nodePayload,
+  };
+
+  dailyNodes.push(nextNode);
+  createCalcHistory(nextNode);
+
+  return { node: nextNode, changed: true };
 }
 
 // --------------------
@@ -131,22 +228,66 @@ function decodeGate(node) {
 // --------------------
 // Demo run
 // --------------------
-const events = [
+const baseEvents = [
   { t: 'IN', at: 730 },
   { t: 'OUT', at: 1510 },
   { t: 'CAT', c: '01', at: 1530 },
   { t: 'EX', c: '02', at: 0 },
 ];
 
-const node = buildNode('child-123', '20260119', events);
-console.log('NODE:', {
-  v: node.v,
-  prefix12: node.prefix12,
-  date: node.date,
-  state_token: node.state_token,
-  dict_id: node.dict_id,
-  derived: node.derived,
+const first = rebuildDailyNode({
+  childId: 'child-123',
+  yyyymmdd: '20260119',
+  events: baseEvents,
+  baseCategoryCode: 'A1',
+  derivedCategoryCode: 'A1',
+  policyVersion: '2026.01',
+  changeReasonCode: '01',
+  changeNote: 'CSV再取込',
 });
 
-const decoded = decodeGate(node);
+const idempotent = rebuildDailyNode({
+  childId: 'child-123',
+  yyyymmdd: '20260119',
+  events: baseEvents,
+  baseCategoryCode: 'A1',
+  derivedCategoryCode: 'A1',
+  policyVersion: '2026.01',
+  changeReasonCode: '01',
+  changeNote: 'CSV再取込',
+});
+
+const updatedEvents = [...baseEvents, { t: 'EX', c: '03', at: 0 }];
+
+const second = rebuildDailyNode({
+  childId: 'child-123',
+  yyyymmdd: '20260119',
+  events: updatedEvents,
+  baseCategoryCode: 'A1',
+  derivedCategoryCode: 'B2',
+  policyVersion: '2026.01',
+  changeReasonCode: '03',
+  changeNote: '免除追加',
+});
+
+console.log('FIRST ACTIVE:', {
+  version: first.node.version,
+  status: first.node.status,
+  prefix12: first.node.prefix12,
+  inputs_hash: first.node.inputs_hash.slice(0, 12),
+});
+console.log('IDEMPOTENT:', { changed: idempotent.changed, version: idempotent.node.version });
+console.log('SECOND ACTIVE:', {
+  version: second.node.version,
+  status: second.node.status,
+  supersedes_id: second.node.supersedes_id,
+  inputs_hash: second.node.inputs_hash.slice(0, 12),
+});
+
+const decoded = decodeGate(second.node);
 console.log('DECODE:', decoded);
+console.log('HISTORY:', dailyNodes.map((n) => ({ id: n.id, version: n.version, status: n.status })));
+console.log(
+  'CALC_HISTORY:',
+  calcHistory.map((c) => ({ id: c.id, daily_node_id: c.daily_node_id })),
+);
