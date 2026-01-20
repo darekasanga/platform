@@ -91,6 +91,9 @@
         min-height: 90px;
         resize: vertical;
       }
+      input[readonly] {
+        color: #cbd5f5;
+      }
       .row {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -152,6 +155,43 @@
         font-size: 0.95rem;
         color: var(--muted);
       }
+      .status-badge {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+        margin: 0.75rem 0 1.25rem;
+      }
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.35rem 0.85rem;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        border: 1px solid transparent;
+      }
+      .status-pill.on {
+        background: rgba(16, 185, 129, 0.12);
+        border-color: rgba(16, 185, 129, 0.5);
+        color: #a7f3d0;
+      }
+      .status-pill.off {
+        background: rgba(239, 68, 68, 0.12);
+        border-color: rgba(239, 68, 68, 0.4);
+        color: #fecdd3;
+      }
+      .status-detail {
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      .guide-list {
+        margin: 0;
+        padding-left: 1.25rem;
+        color: var(--muted);
+        display: grid;
+        gap: 0.5rem;
+      }
       .chip {
         display: inline-flex;
         align-items: center;
@@ -173,8 +213,21 @@
     </header>
     <main>
       <div class="panel">
+        <h2>運用ガイド（固定）</h2>
+        <ul class="guide-list">
+          <li>ローカルONは「IPv4 + 許可CIDR内 + ヘルスOK + 有効化」が揃ったときのみです。</li>
+          <li>テザリング検証は 172.20.10.0/24 を許可CIDRに追加して行います。</li>
+          <li>IPv6でアクセスした場合は常にローカルOFFになり、クラウドへフォールバックします。</li>
+          <li>ローカルNGでも業務は停止せずクラウド経由で継続します。</li>
+        </ul>
+      </div>
+      <div class="panel">
         <h2>ローカル接続設定</h2>
         <p>園内LANで利用する接続先と共有キーを管理します。SSIDは表示専用です。</p>
+        <div class="status-badge">
+          <span class="status-pill off" id="local-status-pill">LOCAL: OFF</span>
+          <span class="status-detail" id="local-status-detail">判定中...</span>
+        </div>
         <form id="wifi-settings-form">
           <label class="toggle">
             <input type="checkbox" id="enabled" />
@@ -217,6 +270,17 @@
             </div>
           </div>
 
+          <div class="row">
+            <div>
+              <label for="current-ip">現在のクライアントIP (IPv4/IPv6)</label>
+              <input type="text" id="current-ip" readonly placeholder="取得中..." />
+            </div>
+            <div>
+              <label for="local-judgement">ローカル判定</label>
+              <input type="text" id="local-judgement" readonly placeholder="未判定" />
+            </div>
+          </div>
+
           <div class="actions">
             <button type="button" class="secondary" id="copy-secret">共有キーをコピー</button>
             <button type="button" class="secondary" id="regen-secret">共有キーを再生成</button>
@@ -255,6 +319,19 @@
         const deviceSecretInput = document.getElementById("device-secret");
         const siteInput = document.getElementById("site-id");
         const ipStatus = document.getElementById("ip-status");
+        const localStatusPill = document.getElementById("local-status-pill");
+        const localStatusDetail = document.getElementById("local-status-detail");
+        const currentIpInput = document.getElementById("current-ip");
+        const localJudgementInput = document.getElementById("local-judgement");
+        const enabledInput = document.getElementById("enabled");
+        const baseUrlInput = document.getElementById("local-api-base");
+
+        const state = {
+          enabled: false,
+          allowedCidrs: [],
+          currentIp: null,
+          healthOk: null
+        };
 
         function showStatus(target, text, type) {
           if (!target) return;
@@ -264,22 +341,120 @@
 
         function parseCidrs(value) {
           return value
-            .split(",")
+            .split(/[,\n]/)
             .map((entry) => entry.trim())
             .filter((entry) => entry.length > 0);
+        }
+
+        function setLocalStatus(status) {
+          if (localStatusPill) {
+            localStatusPill.textContent = status.label;
+            localStatusPill.className = `status-pill ${status.variant}`;
+          }
+          if (localStatusDetail) {
+            localStatusDetail.textContent = status.detail;
+          }
+          if (localJudgementInput) {
+            localJudgementInput.value = status.judgement;
+          }
+        }
+
+        function computeLocalStatus() {
+          if (!state.enabled) {
+            return {
+              label: "LOCAL: OFF (DISABLED)",
+              detail: "ローカル機能が無効です。",
+              variant: "off",
+              judgement: "無効"
+            };
+          }
+
+          if (!state.currentIp) {
+            return {
+              label: "LOCAL: OFF (IP UNKNOWN)",
+              detail: "IPが取得できません。",
+              variant: "off",
+              judgement: "IP未取得"
+            };
+          }
+
+          const version = AdminUtils.getIpVersion(state.currentIp);
+          if (version !== "ipv4") {
+            return {
+              label: "LOCAL: OFF (IPv6)",
+              detail: "IPv6接続はローカル対象外です。",
+              variant: "off",
+              judgement: "IPv6"
+            };
+          }
+
+          if (!AdminUtils.isIpAllowed(state.currentIp, state.allowedCidrs)) {
+            return {
+              label: "LOCAL: OFF (CIDR NG)",
+              detail: "許可CIDR外のためローカルは使いません。",
+              variant: "off",
+              judgement: "CIDR外"
+            };
+          }
+
+          if (!state.healthOk) {
+            const reason = state.healthOk === null ? "HEALTH 未確認" : "HEALTH NG";
+            const judgement = state.healthOk === null ? "ヘルス未確認" : "ヘルスNG";
+            return {
+              label: `LOCAL: OFF (${reason})`,
+              detail: "ローカルAPIのヘルスが確認できません。",
+              variant: "off",
+              judgement
+            };
+          }
+
+          if (!AdminUtils.shouldUseLocalStorage(state.currentIp, state.allowedCidrs, state.enabled, state.healthOk)) {
+            return {
+              label: "LOCAL: OFF (UNKNOWN)",
+              detail: "判定条件が揃っていません。",
+              variant: "off",
+              judgement: "未判定"
+            };
+          }
+
+          return {
+            label: "LOCAL: ON (IPv4 OK)",
+            detail: "園内IPv4でローカルストレージを利用します。",
+            variant: "on",
+            judgement: "ローカルON"
+          };
+        }
+
+        function updateLocalStatus() {
+          setLocalStatus(computeLocalStatus());
+        }
+
+        async function checkHealth(baseUrl) {
+          if (!baseUrl) return null;
+          const healthUrl = `${baseUrl.replace(/\/$/, "")}/health`;
+          try {
+            const response = await fetch(healthUrl, { method: "GET" });
+            if (!response.ok) throw new Error("not ok");
+            return true;
+          } catch (error) {
+            return false;
+          }
         }
 
         async function loadSettings() {
           const siteId = siteInput.value.trim() || AdminUtils.getActiveSite();
           const settings = await AdminUtils.getWifiSettings(siteId);
-          document.getElementById("enabled").checked = settings.enabled;
+          enabledInput.checked = settings.enabled;
           document.getElementById("ssid").value = settings.ssid || "";
-          document.getElementById("local-api-base").value = settings.local_api_base_url || "";
+          baseUrlInput.value = settings.local_api_base_url || "";
           document.getElementById("local-api-port").value = settings.local_api_port ?? "";
           allowedCidrInput.value = (settings.allowed_cidr_list || []).join(", ");
           document.getElementById("heartbeat").value = settings.heartbeat_interval_sec || 15;
           deviceSecretInput.value = await AdminUtils.decryptSecret(settings.device_shared_secret);
+          state.enabled = settings.enabled;
+          state.allowedCidrs = settings.allowed_cidr_list || [];
           showMeta(settings);
+          updateLocalStatus();
         }
 
         function showMeta(settings) {
@@ -293,9 +468,9 @@
         form?.addEventListener("submit", async (event) => {
           event.preventDefault();
           const siteId = siteInput.value.trim() || "default";
-          const enabled = document.getElementById("enabled").checked;
+          const enabled = enabledInput.checked;
           const ssid = document.getElementById("ssid").value.trim();
-          const baseUrl = document.getElementById("local-api-base").value.trim();
+          const baseUrl = baseUrlInput.value.trim();
           const portValue = document.getElementById("local-api-port").value;
           const port = portValue ? Number(portValue) : null;
           const allowedCidrs = parseCidrs(allowedCidrInput.value);
@@ -335,6 +510,9 @@
 
           showStatus(statusMessage, "保存しました。", "success");
           showMeta(settings);
+          state.enabled = enabled;
+          state.allowedCidrs = allowedCidrs;
+          updateLocalStatus();
         });
 
         document.getElementById("regen-secret")?.addEventListener("click", async () => {
@@ -359,24 +537,22 @@
         });
 
         document.getElementById("test-connection")?.addEventListener("click", async () => {
-          const baseUrl = document.getElementById("local-api-base").value.trim();
+          const baseUrl = baseUrlInput.value.trim();
           if (!baseUrl) {
             showStatus(statusMessage, "Local API base URL を入力してください。", "error");
             return;
           }
-          const healthUrl = `${baseUrl.replace(/\/$/, "")}/health`;
-          try {
-            const response = await fetch(healthUrl, { method: "GET" });
-            if (!response.ok) {
-              throw new Error("not ok");
-            }
+          const healthOk = await checkHealth(baseUrl);
+          state.healthOk = healthOk;
+          updateLocalStatus();
+          if (healthOk) {
             showStatus(statusMessage, "接続テストに成功しました。", "success");
             AdminUtils.logAudit({
               actorAdminId: session.id,
               action: "WIFI_LOCAL_TESTED",
               meta: { site_id: siteInput.value.trim() || "default", result: "success" }
             });
-          } catch (error) {
+          } else {
             showStatus(statusMessage, "接続テストに失敗しました。URLやネットワークを確認してください。", "error");
             AdminUtils.logAudit({
               actorAdminId: session.id,
@@ -397,9 +573,40 @@
           showStatus(ipStatus, allowed ? "園内ネットワークとして判定されます。" : "園外として判定されます。", allowed ? "success" : "error");
         });
 
+        enabledInput?.addEventListener("change", () => {
+          state.enabled = enabledInput.checked;
+          updateLocalStatus();
+        });
+
+        allowedCidrInput?.addEventListener("input", () => {
+          state.allowedCidrs = parseCidrs(allowedCidrInput.value);
+          updateLocalStatus();
+        });
+
+        baseUrlInput?.addEventListener("input", () => {
+          state.healthOk = null;
+          updateLocalStatus();
+        });
+
+        async function loadClientIp() {
+          if (!currentIpInput) return;
+          currentIpInput.value = "取得中...";
+          const ip = await AdminUtils.getClientIp();
+          state.currentIp = ip;
+          currentIpInput.value = ip || "取得できません";
+          updateLocalStatus();
+        }
+
+        async function refreshHealth() {
+          state.healthOk = await checkHealth(baseUrlInput.value.trim());
+          updateLocalStatus();
+        }
+
         window.addEventListener("load", () => {
           siteInput.value = AdminUtils.getActiveSite();
           loadSettings();
+          loadClientIp();
+          refreshHealth();
         });
       })();
     </script>

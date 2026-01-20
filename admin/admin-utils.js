@@ -365,6 +365,13 @@
     }
   }
 
+  function getIpVersion(ip) {
+    if (!ip || typeof ip !== "string") return null;
+    if (ip.includes(":")) return "ipv6";
+    if (ip.split(".").length === 4) return "ipv4";
+    return null;
+  }
+
   function ipToInt(ip) {
     const parts = ip.split(".");
     if (parts.length !== 4) return null;
@@ -388,6 +395,17 @@
     return cidrs.some((cidr) => cidrContains(ip, cidr.trim()));
   }
 
+  // Nodeは状態空間の点であり、blob/objectは監査・保険用の生データと区別する。
+  function shouldUseLocalStorage(requestIp, allowedCidrs, enabled, healthOk) {
+    if (!enabled) return false;
+    if (!requestIp) return false;
+    const version = getIpVersion(requestIp);
+    if (version !== "ipv4") return false;
+    if (!isIpAllowed(requestIp, allowedCidrs)) return false;
+    if (!healthOk) return false;
+    return true;
+  }
+
   window.AdminUtils = {
     ensureSeedAdmin,
     hashPassword,
@@ -409,6 +427,8 @@
     decryptSecret,
     randomString,
     isIpAllowed,
-    getClientIp
+    getClientIp,
+    getIpVersion,
+    shouldUseLocalStorage
   };
 })();
