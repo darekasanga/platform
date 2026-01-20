@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>園側通知スレッド | SenSei Platform</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0;
+        background: #f8fafc;
+        color: #0f172a;
+      }
+      header {
+        background: #111827;
+        color: #fff;
+        padding: 1.5rem 2rem;
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 2rem;
+      }
+      .thread {
+        background: #fff;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
+      }
+      .message {
+        border-bottom: 1px solid #e2e8f0;
+        padding: 0.75rem 0;
+      }
+      .message:last-child {
+        border-bottom: none;
+      }
+      .meta {
+        font-size: 0.85rem;
+        color: #64748b;
+        margin-bottom: 0.25rem;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.8rem;
+        padding: 0.2rem 0.55rem;
+        border-radius: 999px;
+        background: #e2e8f0;
+      }
+      .badge.staff {
+        background: #dbeafe;
+        color: #1e3a8a;
+      }
+      .badge.guardian {
+        background: #dcfce7;
+        color: #14532d;
+      }
+      form {
+        margin-top: 1.5rem;
+        display: grid;
+        gap: 0.75rem;
+      }
+      textarea {
+        width: 100%;
+        min-height: 120px;
+        padding: 0.75rem;
+        border: 1px solid #cbd5f5;
+        border-radius: 12px;
+        font-size: 1rem;
+      }
+      button {
+        padding: 0.8rem 1.2rem;
+        border: none;
+        border-radius: 10px;
+        background: #0ea5e9;
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .status {
+        margin-top: 1rem;
+        font-weight: 700;
+      }
+      .status-bar {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+      }
+      .status-bar span {
+        background: #f1f5f9;
+        padding: 0.4rem 0.7rem;
+        border-radius: 999px;
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>園側通知スレッド</h1>
+      <p id="thread-status">読み込み中...</p>
+    </header>
+    <main>
+      <section class="thread">
+        <div class="status-bar" id="read-status"></div>
+        <div id="messages"></div>
+        <form id="send-form">
+          <label for="send">保護者へ送信</label>
+          <textarea id="send" placeholder="通知内容を入力"></textarea>
+          <button type="submit">送信</button>
+        </form>
+        <div id="send-status" class="status"></div>
+      </section>
+    </main>
+    <script src="./admin-utils.js"></script>
+    <script>
+      (() => {
+        const messagesContainer = document.getElementById("messages");
+        const sendForm = document.getElementById("send-form");
+        const sendInput = document.getElementById("send");
+        const sendStatus = document.getElementById("send-status");
+        const threadStatus = document.getElementById("thread-status");
+        const readStatus = document.getElementById("read-status");
+        const session = AdminUtils.requireAdminSession({ allowMustChange: true });
+        const threadId = window.location.pathname.split("/").pop();
+
+        const renderMessages = (messages = []) => {
+          if (!messages.length) {
+            messagesContainer.innerHTML = "<p>まだメッセージはありません。</p>";
+            return;
+          }
+          messagesContainer.innerHTML = messages
+            .map((message) => {
+              const senderClass = message.sender_type === "STAFF" ? "staff" : "guardian";
+              const senderLabel = message.sender_type === "STAFF" ? "園" : "保護者";
+              return `
+                <div class="message">
+                  <div class="meta">
+                    <span class="badge ${senderClass}">${senderLabel}</span>
+                    ${new Date(message.created_at).toLocaleString()}
+                  </div>
+                  <div>${message.body_text}</div>
+                </div>
+              `;
+            })
+            .join("");
+        };
+
+        const loadThread = async () => {
+          const response = await fetch(`/admin/api/notify/threads/${threadId}`, {
+            headers: { "x-staff-id": session?.id || "" }
+          });
+          if (!response.ok) {
+            threadStatus.textContent = "通知スレッドを取得できませんでした。";
+            return;
+          }
+          const payload = await response.json();
+          threadStatus.textContent = `園児ID: ${payload.child_id} | スレッド状態: ${payload.status}`;
+          renderMessages(payload.messages);
+          readStatus.innerHTML = `
+            <span>保護者未読: ${payload.unread_guardian}</span>
+            <span>職員未読: ${payload.unread_staff}</span>
+          `;
+          await fetch(`/admin/notify/threads/${threadId}/read`, {
+            method: "POST",
+            headers: { "x-staff-id": session?.id || "" }
+          });
+        };
+
+        sendForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const bodyText = sendInput.value.trim();
+          if (!bodyText) return;
+          const response = await fetch(`/admin/notify/threads/${threadId}/send`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-staff-id": session?.id || ""
+            },
+            body: JSON.stringify({ body_text: bodyText })
+          });
+          if (!response.ok) {
+            sendStatus.textContent = "送信に失敗しました。";
+            return;
+          }
+          sendInput.value = "";
+          sendStatus.textContent = "送信しました。";
+          await loadThread();
+        });
+
+        loadThread();
+      })();
+    </script>
+  </body>
+</html>
