@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CalCu - 園児通知連携</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #f8fafc;
+        color: #0f172a;
+      }
+      header {
+        padding: 1.5rem 2rem;
+        background: #0f172a;
+        color: #fff;
+      }
+      main {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        gap: 1.5rem;
+        padding: 1.5rem 2rem 3rem;
+      }
+      .panel {
+        background: #fff;
+        border-radius: 16px;
+        padding: 1.25rem;
+        box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
+      }
+      .child-list button {
+        width: 100%;
+        margin-bottom: 0.6rem;
+        padding: 0.75rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        background: #fff;
+        text-align: left;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .child-list button.active {
+        border-color: #2563eb;
+        background: #eff6ff;
+      }
+      .line-section {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.4rem 0.75rem;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 0.9rem;
+      }
+      .badge.linked {
+        background: #dcfce7;
+        color: #14532d;
+      }
+      .badge.unlinked {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+      .badge.unread {
+        background: #fde68a;
+        color: #92400e;
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+      .controls button {
+        padding: 0.65rem 1.1rem;
+        border-radius: 10px;
+        border: none;
+        background: #2563eb;
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .controls button.secondary {
+        background: #e2e8f0;
+        color: #0f172a;
+      }
+      .status {
+        font-size: 0.9rem;
+        color: #475569;
+      }
+      .qr-modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.6);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+      }
+      .qr-card {
+        background: #fff;
+        padding: 1.5rem;
+        border-radius: 16px;
+        max-width: 420px;
+        width: 100%;
+        text-align: center;
+      }
+      .qr-card svg {
+        width: 240px;
+        height: 240px;
+        margin-bottom: 1rem;
+      }
+      .toolbar {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+        justify-content: center;
+      }
+      .toolbar button {
+        padding: 0.5rem 0.9rem;
+        border-radius: 8px;
+        border: none;
+        background: #0f172a;
+        color: #fff;
+        cursor: pointer;
+      }
+      .staff-input {
+        margin-top: 1rem;
+      }
+      .staff-input input {
+        width: 100%;
+        padding: 0.6rem;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>CalCu 園児タブ - 保護者通知</h1>
+    </header>
+    <main>
+      <section class="panel">
+        <h2>園児一覧</h2>
+        <div class="child-list" id="child-list">
+          <button data-child-id="child-001">園児A (child-001)</button>
+          <button data-child-id="child-002">園児B (child-002)</button>
+          <button data-child-id="child-003">園児C (child-003)</button>
+        </div>
+        <div class="staff-input">
+          <label for="staff-id">職員ID（通知送信元）</label>
+          <input id="staff-id" type="text" placeholder="staff-001" />
+        </div>
+      </section>
+      <section class="panel">
+        <h2>LINEセクション</h2>
+        <div class="line-section">
+          <div id="link-badge" class="badge unlinked">未連携</div>
+          <div id="unread-badge" class="badge unread" style="display: none;">未読 0</div>
+          <div class="status" id="line-status">園児を選択してください。</div>
+          <div class="controls">
+            <button id="btn-qr" class="secondary">QR表示</button>
+            <button id="btn-open">通知を開く</button>
+            <button id="btn-new" class="secondary">新規通知</button>
+            <button id="btn-refresh" class="secondary">再読み込み</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="qr-modal" id="qr-modal">
+      <div class="qr-card">
+        <div id="qr-image"></div>
+        <div id="qr-url" class="status"></div>
+        <div class="toolbar">
+          <button id="qr-close">閉じる</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (() => {
+        const childButtons = document.querySelectorAll("#child-list button");
+        const linkBadge = document.getElementById("link-badge");
+        const unreadBadge = document.getElementById("unread-badge");
+        const lineStatus = document.getElementById("line-status");
+        const staffInput = document.getElementById("staff-id");
+        const qrModal = document.getElementById("qr-modal");
+        const qrImage = document.getElementById("qr-image");
+        const qrUrl = document.getElementById("qr-url");
+
+        const btnQr = document.getElementById("btn-qr");
+        const btnOpen = document.getElementById("btn-open");
+        const btnNew = document.getElementById("btn-new");
+        const btnRefresh = document.getElementById("btn-refresh");
+        const btnClose = document.getElementById("qr-close");
+
+        let activeChildId = null;
+        let activeThreadId = null;
+
+        const updateBadges = (state) => {
+          if (!state) return;
+          linkBadge.className = state.link_status === "LINKED" ? "badge linked" : "badge unlinked";
+          linkBadge.textContent =
+            state.link_status === "LINKED"
+              ? `連携済み (${state.linked_count})`
+              : "未連携";
+
+          if (state.unread_count > 0) {
+            unreadBadge.style.display = "inline-flex";
+            unreadBadge.textContent = `未読 ${state.unread_count}`;
+          } else {
+            unreadBadge.style.display = "none";
+          }
+
+          activeThreadId = state.thread_id;
+          lineStatus.textContent = state.last_message_at
+            ? `最終メッセージ: ${new Date(state.last_message_at).toLocaleString()}`
+            : "まだ通知スレッドはありません。";
+        };
+
+        const fetchNotifyState = async () => {
+          if (!activeChildId) return;
+          const staffId = staffInput.value.trim();
+          const response = await fetch(`/admin/children/${activeChildId}/notify-state`, {
+            headers: staffId ? { "x-staff-id": staffId } : {}
+          });
+          if (!response.ok) {
+            lineStatus.textContent = "通知状態の取得に失敗しました。";
+            return;
+          }
+          const state = await response.json();
+          updateBadges(state);
+        };
+
+        const upsertThread = async () => {
+          const response = await fetch("/admin/notify/thread/upsert", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-staff-id": staffInput.value.trim() },
+            body: JSON.stringify({ child_id: activeChildId })
+          });
+          if (!response.ok) {
+            throw new Error("thread upsert failed");
+          }
+          const payload = await response.json();
+          activeThreadId = payload.thread_id;
+          return payload.thread_id;
+        };
+
+        btnQr.addEventListener("click", async () => {
+          if (!activeChildId) return;
+          const threadId = activeThreadId || (await upsertThread());
+          const response = await fetch("/admin/notify/qr", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-staff-id": staffInput.value.trim() },
+            body: JSON.stringify({ child_id: activeChildId, thread_id: threadId })
+          });
+          if (!response.ok) return;
+          const payload = await response.json();
+          qrImage.innerHTML = payload.qr_svg;
+          qrUrl.textContent = payload.url;
+          qrModal.style.display = "flex";
+        });
+
+        btnOpen.addEventListener("click", async () => {
+          if (!activeChildId) return;
+          const threadId = activeThreadId || (await upsertThread());
+          window.location.href = `/admin/notify/threads/${threadId}`;
+        });
+
+        btnNew.addEventListener("click", async () => {
+          if (!activeChildId) return;
+          const threadId = await upsertThread();
+          window.location.href = `/admin/notify/threads/${threadId}`;
+        });
+
+        btnRefresh.addEventListener("click", fetchNotifyState);
+
+        btnClose.addEventListener("click", () => {
+          qrModal.style.display = "none";
+        });
+
+        childButtons.forEach((button) => {
+          button.addEventListener("click", () => {
+            childButtons.forEach((btn) => btn.classList.remove("active"));
+            button.classList.add("active");
+            activeChildId = button.dataset.childId;
+            fetchNotifyState();
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>

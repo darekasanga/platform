@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Log in</title>
+    <title>保護者ログイン | SenSei Platform</title>
     <style>
       body {
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -24,7 +24,7 @@
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
         gap: 1.5rem;
-        max-width: 920px;
+        max-width: 960px;
       }
       .card {
         width: 100%;
@@ -54,7 +54,7 @@
         color: #e2e8f0;
       }
       p {
-        margin: 0 0 1.5rem;
+        margin: 0 0 1rem;
         color: #4b5563;
       }
       .card.accent p {
@@ -68,18 +68,6 @@
       }
       .card.accent label {
         color: #f8fafc;
-      }
-      .inline-label {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin: 0.5rem 0 1rem;
-        font-weight: 500;
-        color: #0f172a;
-      }
-      .inline-label input[type="checkbox"] {
-        width: auto;
-        margin: 0;
       }
       input {
         width: 100%;
@@ -140,36 +128,35 @@
         border: 1px solid rgba(245, 158, 11, 0.4);
         color: #92400e;
       }
-      .back-link {
-        display: inline-block;
-        margin-top: 1rem;
-        color: #0055ff;
-        text-decoration: none;
-        font-weight: 600;
-      }
-      .fine-print {
-        margin-top: 1rem;
-        font-size: 0.9rem;
-        color: #cbd5e1;
-      }
       .actions {
-        display: flex;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
         gap: 0.6rem;
-        flex-wrap: wrap;
-        margin: 0.75rem 0 0;
+        margin-top: 0.6rem;
       }
       .actions button.secondary {
         background: #f1f5f9;
         color: #0f172a;
         border: 1px solid #d1d5db;
       }
-      .fallback-panel {
-        margin-top: 0.75rem;
+      .fine-print {
+        margin-top: 1rem;
+        font-size: 0.9rem;
+        color: #cbd5e1;
+      }
+      .notice {
+        background: rgba(14, 165, 233, 0.1);
+        border: 1px solid rgba(14, 165, 233, 0.4);
         padding: 0.75rem;
         border-radius: 12px;
-        border: 1px dashed #cbd5f5;
-        background: #eef2ff;
-        color: #1e293b;
+        color: #0c4a6e;
+        font-weight: 600;
+        margin-top: 0.75rem;
+      }
+      .card.accent .notice {
+        background: rgba(248, 250, 252, 0.2);
+        border-color: rgba(248, 250, 252, 0.35);
+        color: #f8fafc;
       }
     </style>
   </head>
@@ -177,324 +164,113 @@
     <div class="container">
       <div class="grid">
         <div class="card">
-          <h1>Platform log in</h1>
-          <p class="subtitle">Access your account to continue to your workspace experience.</p>
-          <form id="login-form">
-            <label for="email">Email</label>
-            <input type="email" id="email" name="email" placeholder="you@example.com" required />
-
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" placeholder="••••••••" required />
-
-            <label class="inline-label">
-              <input type="checkbox" name="remember" />
-              Remember this device
-            </label>
-
-            <button type="submit">Continue</button>
+          <h1>SMSでログイン（推奨）</h1>
+          <p class="subtitle">電話番号で本人確認して、保護者通知に進みます。</p>
+          <div class="notice">園児名などの内容はログイン後に表示されます</div>
+          <div class="notice">QRは入口で、個人情報は含みません</div>
+          <form id="sms-start-form">
+            <label for="phone">電話番号（E.164）</label>
+            <input type="tel" id="phone" name="phone" placeholder="+819012345678" required />
+            <button type="submit">SMSで続ける</button>
           </form>
-          <div class="message" id="login-message" role="status" aria-live="polite"></div>
-          <div class="card" style="margin-top: 1rem; padding: 1rem; background: #f8fafc; box-shadow: none;">
-            <h2 style="margin: 0 0 0.5rem; font-size: 1rem;">生体認証の確認</h2>
-            <p class="subtitle" style="margin-bottom: 0.75rem;">登録済み端末はログイン時に生体認証を必ず試行します。</p>
-            <label class="inline-label" style="margin-bottom: 0.75rem;">
-              <input type="checkbox" id="device-registered" />
-              この端末は園内端末として登録済み
-            </label>
-            <div class="actions">
-              <button type="button" class="secondary" id="biometric-start">生体認証を開始</button>
-              <button type="button" class="secondary" id="biometric-cancel">キャンセル</button>
-            </div>
-            <div class="message" id="biometric-message" role="status" aria-live="polite"></div>
-            <div id="fallback-panel" class="fallback-panel" hidden>
-              <strong>代替手段</strong>
-              <p style="margin: 0.35rem 0 0.75rem;">生体認証が使えない場合は以下から選択してください。</p>
-              <div class="actions">
-                <button type="button" class="secondary" id="fallback-admin">管理者承認</button>
-                <button type="button" class="secondary" id="fallback-code">ワンタイムコード</button>
-                <button type="button" class="secondary" id="fallback-login">通常ログイン</button>
-              </div>
-            </div>
-          </div>
-          <a class="back-link" href="./index.html">← Back to home</a>
+          <form id="sms-verify-form" style="display: none;">
+            <label for="code">認証コード</label>
+            <input type="text" id="code" name="code" placeholder="6桁" required />
+            <button type="submit">認証</button>
+          </form>
+          <div class="message" id="sms-message" role="status" aria-live="polite"></div>
         </div>
-
         <div class="card accent">
-          <h1>Create account</h1>
-          <p class="subtitle">New to Platform? Register to launch and monitor your workflows.</p>
-          <form id="signup-form">
-            <label for="full-name">Full name</label>
-            <input type="text" id="full-name" name="full-name" placeholder="Alex Doe" required />
-
-            <label for="signup-email">Work email</label>
-            <input type="email" id="signup-email" name="signup-email" placeholder="you@example.com" required />
-
-            <label for="signup-password">Password</label>
-            <input type="password" id="signup-password" name="signup-password" placeholder="Create a strong password" required />
-
-            <label for="signup-confirm">Confirm password</label>
-            <input type="password" id="signup-confirm" name="signup-confirm" placeholder="Re-enter your password" required />
-
-            <button type="submit">Create account</button>
-          </form>
-          <div class="message" id="signup-message" role="status" aria-live="polite"></div>
-          <p class="fine-print">By creating an account, you agree to our acceptable use policy.</p>
+          <h1>アカウントをお持ちの方</h1>
+          <p class="subtitle">お持ちのアカウントで本人確認できます（新規作成は不要）</p>
+          <div class="actions">
+            <button class="secondary" type="button" data-provider="microsoft">Microsoftで続ける</button>
+            <button class="secondary" type="button" data-provider="apple">Appleで続ける</button>
+            <button class="secondary" type="button" data-provider="google">Googleで続ける</button>
+            <button class="secondary" type="button" data-provider="yahoo">Yahoo!で続ける</button>
+          </div>
+          <p class="fine-print">ログインは本人確認であり、通知手段とは分離されています。</p>
         </div>
       </div>
     </div>
     <script>
       (() => {
-        const STORAGE_KEY = "platformAccounts";
-        const DEVICE_REGISTERED_KEY = "platformDeviceRegistered";
-        const SEED_ACCOUNTS = [
-          { id: "seed-1", name: "Ayumi Tanaka", email: "ayumi.tanaka@acme.io", msSubject: "m365|director-001", role: "DIRECTOR", status: "Active", isActive: true, lastLogin: "2 hours ago", initialPassword: "administration" },
-          { id: "seed-2", name: "Koji Sato", email: "koji.sato@acme.io", msSubject: "m365|deputy-002", role: "DEPUTY", status: "Active", isActive: true, lastLogin: "Yesterday", initialPassword: "administration" },
-          { id: "seed-3", name: "Nana Mori", email: "nana.mori@acme.io", msSubject: "m365|staff-003", role: "STAFF", status: "Active", isActive: true, lastLogin: "Aug 12", initialPassword: "administration" }
-        ];
+        const smsStartForm = document.getElementById("sms-start-form");
+        const smsVerifyForm = document.getElementById("sms-verify-form");
+        const smsMessage = document.getElementById("sms-message");
+        const phoneInput = document.getElementById("phone");
+        const codeInput = document.getElementById("code");
+        const providerButtons = document.querySelectorAll("button[data-provider]");
+        const urlParams = new URLSearchParams(window.location.search);
+        const returnTo = urlParams.get("return_to") || "/";
+        let currentChallengeId = null;
 
-        const loginForm = document.getElementById("login-form");
-        const signupForm = document.getElementById("signup-form");
-        const loginMessage = document.getElementById("login-message");
-        const messageEl = document.getElementById("signup-message");
-        const biometricMessage = document.getElementById("biometric-message");
-        const biometricStart = document.getElementById("biometric-start");
-        const biometricCancel = document.getElementById("biometric-cancel");
-        const fallbackPanel = document.getElementById("fallback-panel");
-        const fallbackAdmin = document.getElementById("fallback-admin");
-        const fallbackCode = document.getElementById("fallback-code");
-        const fallbackLogin = document.getElementById("fallback-login");
-        const deviceRegisteredToggle = document.getElementById("device-registered");
-        let pendingLogin = null;
+        const setMessage = (text, type = "success") => {
+          smsMessage.textContent = text;
+          smsMessage.className = `message ${type}`;
+        };
 
-        function loadAccounts() {
-          try {
-            const stored = localStorage.getItem(STORAGE_KEY);
-            return stored ? JSON.parse(stored) : [];
-          } catch (error) {
-            console.error("Unable to read stored accounts", error);
-            return [];
+        smsStartForm?.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const phone = phoneInput.value.trim();
+          if (!phone) {
+            setMessage("電話番号を入力してください。", "error");
+            return;
           }
-        }
 
-        function saveAccounts(list) {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-        }
-
-        function getAccounts() {
-          const existing = loadAccounts();
-          if (existing.length) {
-            const normalized = existing.map((account) => ({
-              ...account,
-              password: account.password || account.initialPassword || "administration",
-              isActive: account.isActive !== false,
-              msSubject: account.msSubject || "m365|pending"
-            }));
-            saveAccounts(normalized);
-            return normalized;
-          }
-          const seeded = SEED_ACCOUNTS.map((account) => ({ ...account, password: account.initialPassword || "administration", isActive: true }));
-          saveAccounts(seeded);
-          return seeded;
-        }
-
-        function addAccount({ name, email, role, status, lastLogin, password }) {
-          const accounts = getAccounts();
-          const exists = accounts.some((acct) => acct.email.toLowerCase() === email.toLowerCase());
-          if (exists) {
-            showMessage("このメールは既に登録されています。", "error");
-            return false;
-          }
-          accounts.push({
-            id: crypto.randomUUID ? crypto.randomUUID() : `acct-${Date.now()}`,
-            name,
-            email,
-            msSubject: `m365|pending-${Date.now()}`,
-            role,
-            status,
-            lastLogin,
-            initialPassword: password || "administration",
-            password: password || "administration",
-            isActive: true
+          const response = await fetch("/auth/sms/start", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ phone_e164: phone, purpose: "LINK_BY_QR", return_to: returnTo })
           });
-          saveAccounts(accounts);
-          return true;
-        }
 
-        function findAccount(email) {
-          const accounts = getAccounts();
-          return accounts.find((account) => account.email.toLowerCase() === email.toLowerCase());
-        }
-
-        function showMessage(text, type) {
-          if (!messageEl) return;
-          messageEl.textContent = text;
-          messageEl.className = `message ${type}`;
-        }
-
-        function showLoginMessage(text, type) {
-          if (!loginMessage) return;
-          loginMessage.textContent = text;
-          loginMessage.className = `message ${type}`;
-        }
-
-        function showBiometricMessage(text, type) {
-          if (!biometricMessage) return;
-          biometricMessage.textContent = text;
-          biometricMessage.className = `message ${type}`;
-        }
-
-        function setFallbackVisible(visible) {
-          if (!fallbackPanel) return;
-          fallbackPanel.hidden = !visible;
-        }
-
-        async function checkBiometricAvailability() {
-          if (!window.isSecureContext) {
-            return { ok: false, reason: "安全な接続ではありません。" };
-          }
-          if (!window.PublicKeyCredential || !navigator.credentials) {
-            return { ok: false, reason: "この端末では生体認証が利用できません。" };
-          }
-          try {
-            const available = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-            if (!available) {
-              return { ok: false, reason: "プラットフォーム生体認証が利用できません。" };
-            }
-            return { ok: true };
-          } catch (error) {
-            console.error("Biometric availability check failed", error);
-            return { ok: false, reason: "生体認証の確認中にエラーが発生しました。" };
-          }
-        }
-
-        function continueLogin({ email, password, remember }) {
-          const account = findAccount(email);
-          if (!account) {
-            showLoginMessage("アカウントが見つかりません。メールを確認してください。", "error");
+          if (!response.ok) {
+            setMessage("SMS送信に失敗しました。しばらくして再試行してください。", "error");
             return;
           }
 
-          if (!account.isActive) {
-            showLoginMessage("このアカウントは無効化されています。", "error");
+          const payload = await response.json();
+          currentChallengeId = payload.challenge_id;
+          smsStartForm.style.display = "none";
+          smsVerifyForm.style.display = "block";
+          setMessage("SMSを送信しました。届いたコードを入力してください。", "success");
+
+          if (payload.debug_code) {
+            setMessage(`開発用コード: ${payload.debug_code}`, "warning");
+          }
+        });
+
+        smsVerifyForm?.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const code = codeInput.value.trim();
+          if (!currentChallengeId || !code) {
+            setMessage("認証コードを入力してください。", "error");
             return;
           }
 
-          const expected = account.password || account.initialPassword || "administration";
-          if (password !== expected) {
-            showLoginMessage("パスワードが正しくありません。", "error");
+          const response = await fetch("/auth/sms/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ challenge_id: currentChallengeId, code })
+          });
+
+          if (!response.ok) {
+            const errorPayload = await response.json().catch(() => ({}));
+            setMessage(errorPayload.message || "認証に失敗しました。", "error");
             return;
           }
 
-          const session = { email: account.email, name: account.name, role: account.role, lastLogin: new Date().toISOString() };
-          sessionStorage.setItem("platformSession", JSON.stringify(session));
-          if (remember) {
-            localStorage.setItem("platformRemember", JSON.stringify(session));
-          }
-
-          showLoginMessage("ログインに成功しました。ワークスペースに移動します。", "success");
+          setMessage("認証に成功しました。移動します…", "success");
           setTimeout(() => {
-            window.location.href = "./workspace.html";
-          }, 600);
-        }
-
-        async function startBiometricFlow(loginPayload) {
-          pendingLogin = loginPayload;
-          setFallbackVisible(false);
-          showBiometricMessage("生体認証を確認しています…", "warning");
-          const availability = await checkBiometricAvailability();
-          if (!availability.ok) {
-            showBiometricMessage(`生体認証が使えません: ${availability.reason}`, "error");
-            setFallbackVisible(true);
-            return;
-          }
-          showBiometricMessage("生体認証を開始してください。完了後に続行します。", "success");
-        }
-
-        loginForm?.addEventListener("submit", (event) => {
-          event.preventDefault();
-          const email = document.getElementById("email").value.trim();
-          const password = document.getElementById("password").value;
-          const remember = document.querySelector('input[name="remember"]').checked;
-
-          const deviceRegistered = deviceRegisteredToggle?.checked;
-          if (deviceRegistered) {
-            startBiometricFlow({ email, password, remember });
-            return;
-          }
-          continueLogin({ email, password, remember });
+            window.location.href = returnTo;
+          }, 400);
         });
 
-        biometricStart?.addEventListener("click", () => {
-          if (!pendingLogin) {
-            showBiometricMessage("ログイン情報を入力してから再度お試しください。", "error");
-            return;
-          }
-          showBiometricMessage("生体認証が完了しました。ログインを続行します。", "success");
-          continueLogin(pendingLogin);
-          pendingLogin = null;
-        });
-
-        biometricCancel?.addEventListener("click", () => {
-          pendingLogin = null;
-          showBiometricMessage("生体認証をキャンセルしました。代替手段を選択してください。", "error");
-          setFallbackVisible(true);
-        });
-
-        fallbackAdmin?.addEventListener("click", () => {
-          showBiometricMessage("管理者承認をリクエストしました。管理者に連絡してください。", "warning");
-        });
-
-        fallbackCode?.addEventListener("click", () => {
-          showBiometricMessage("ワンタイムコード入力フローへ移動してください。", "warning");
-        });
-
-        fallbackLogin?.addEventListener("click", () => {
-          if (!pendingLogin) {
-            showBiometricMessage("ログイン情報を入力してください。", "error");
-            return;
-          }
-          continueLogin(pendingLogin);
-          pendingLogin = null;
-        });
-
-        deviceRegisteredToggle?.addEventListener("change", (event) => {
-          localStorage.setItem(DEVICE_REGISTERED_KEY, event.target.checked ? "true" : "false");
-        });
-
-        if (deviceRegisteredToggle) {
-          deviceRegisteredToggle.checked = localStorage.getItem(DEVICE_REGISTERED_KEY) === "true";
-        }
-
-        signupForm?.addEventListener("submit", (event) => {
-          event.preventDefault();
-          const name = document.getElementById("full-name").value.trim();
-          const email = document.getElementById("signup-email").value.trim();
-          const password = document.getElementById("signup-password").value;
-          const confirm = document.getElementById("signup-confirm").value;
-
-          if (!name || !email) {
-            showMessage("名前とメールアドレスを入力してください。", "error");
-            return;
-          }
-
-          if (password !== confirm) {
-            showMessage("パスワードが一致しません。", "error");
-            return;
-          }
-
-          const added = addAccount({
-            name,
-            email,
-            role: "STAFF",
-            status: "Pending first login",
-            lastLogin: "Not yet",
-            password
+        providerButtons.forEach((button) => {
+          button.addEventListener("click", () => {
+            const provider = button.dataset.provider;
+            window.location.href = `/auth/${provider}/login?return_to=${encodeURIComponent(returnTo)}`;
           });
-
-          if (added) {
-            showMessage("アカウントを作成しました。管理ページで確認できます。", "success");
-            signupForm.reset();
-          }
         });
       })();
     </script>
